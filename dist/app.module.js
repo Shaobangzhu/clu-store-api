@@ -18,6 +18,7 @@ const database_config_1 = require("./config/database.config");
 const env_validation_1 = require("./config/env.validation");
 const jwt_config_1 = require("./config/jwt.config");
 const redis_config_1 = require("./config/redis.config");
+const database_module_1 = require("./database/database.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -34,6 +35,7 @@ exports.AppModule = AppModule = __decorate([
                 autoSchemaFile: (0, path_1.join)(process.cwd(), 'src/schema.gql'),
                 sortSchema: true,
             }),
+            database_module_1.DatabaseModule,
         ],
         providers: [app_resolver_1.AppResolver],
     })

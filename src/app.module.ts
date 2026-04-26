@@ -9,6 +9,7 @@ import { databaseConfig } from './config/database.config';
 import { envValidationSchema } from './config/env.validation';
 import { jwtConfig } from './config/jwt.config';
 import { redisConfig } from './config/redis.config';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { redisConfig } from './config/redis.config';
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
     }),
+    DatabaseModule,
   ],
   providers: [AppResolver],
 })
