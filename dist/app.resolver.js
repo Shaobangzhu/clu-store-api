@@ -11,9 +11,17 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppResolver = void 0;
 const graphql_1 = require("@nestjs/graphql");
+const cache_service_1 = require("./cache/cache.service");
 let AppResolver = class AppResolver {
+    cacheService;
+    constructor(cacheService) {
+        this.cacheService = cacheService;
+    }
     hello() {
         return 'GraphQL is ready';
+    }
+    async cachePing() {
+        return this.cacheService.ping();
     }
 };
 exports.AppResolver = AppResolver;
@@ -23,7 +31,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", String)
 ], AppResolver.prototype, "hello", null);
+__decorate([
+    (0, graphql_1.Query)(() => String),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AppResolver.prototype, "cachePing", null);
 exports.AppResolver = AppResolver = __decorate([
-    (0, graphql_1.Resolver)()
+    (0, graphql_1.Resolver)(),
+    __metadata("design:paramtypes", [cache_service_1.CacheService])
 ], AppResolver);
 //# sourceMappingURL=app.resolver.js.map

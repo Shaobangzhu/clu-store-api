@@ -3,5 +3,6 @@
 # ------------------------------------------------------
 
 type Query {
+  cachePing: String!
   hello: String!
 }

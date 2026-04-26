@@ -13,6 +13,7 @@ const config_1 = require("@nestjs/config");
 const graphql_1 = require("@nestjs/graphql");
 const path_1 = require("path");
 const app_resolver_1 = require("./app.resolver");
+const cache_module_1 = require("./cache/cache.module");
 const app_config_1 = require("./config/app.config");
 const database_config_1 = require("./config/database.config");
 const env_validation_1 = require("./config/env.validation");
@@ -36,6 +37,7 @@ exports.AppModule = AppModule = __decorate([
                 sortSchema: true,
             }),
             database_module_1.DatabaseModule,
+            cache_module_1.CacheModule,
         ],
         providers: [app_resolver_1.AppResolver],
     })

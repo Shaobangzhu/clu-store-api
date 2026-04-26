@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'path';
 import { AppResolver } from './app.resolver';
+import { CacheModule } from './cache/cache.module';
 import { appConfig } from './config/app.config';
 import { databaseConfig } from './config/database.config';
 import { envValidationSchema } from './config/env.validation';
@@ -24,6 +25,7 @@ import { DatabaseModule } from './database/database.module';
       sortSchema: true,
     }),
     DatabaseModule,
+    CacheModule,
   ],
   providers: [AppResolver],
 })
