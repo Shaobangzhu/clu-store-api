@@ -11,6 +11,7 @@ import { envValidationSchema } from './config/env.validation';
 import { jwtConfig } from './config/jwt.config';
 import { redisConfig } from './config/redis.config';
 import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { DatabaseModule } from './database/database.module';
     }),
     DatabaseModule,
     CacheModule,
+    HealthModule,
   ],
   providers: [AppResolver],
 })

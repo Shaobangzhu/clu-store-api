@@ -2,7 +2,18 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type DependencyHealth {
+  isHealthy: Boolean!
+  name: String!
+}
+
+type HealthStatus {
+  dependencies: [DependencyHealth!]!
+  status: String!
+}
+
 type Query {
   cachePing: String!
+  health: HealthStatus!
   hello: String!
 }

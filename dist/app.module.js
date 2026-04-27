@@ -20,6 +20,7 @@ const env_validation_1 = require("./config/env.validation");
 const jwt_config_1 = require("./config/jwt.config");
 const redis_config_1 = require("./config/redis.config");
 const database_module_1 = require("./database/database.module");
+const health_module_1 = require("./health/health.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -38,6 +39,7 @@ exports.AppModule = AppModule = __decorate([
             }),
             database_module_1.DatabaseModule,
             cache_module_1.CacheModule,
+            health_module_1.HealthModule,
         ],
         providers: [app_resolver_1.AppResolver],
     })
