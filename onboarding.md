@@ -14,6 +14,57 @@ Planned product categories include:
 
 The backend is being built as a modular monolith first, with a strong focus on interview-ready NestJS architecture and engineering discipline.
 
+## Project Phase Plan
+
+### Phase 0: Foundation and Project Setup
+
+- Nest scaffold
+- GraphQL code-first setup
+- ConfigModule + env validation
+- Mongo connection
+- Redis connection
+- Docker / compose
+- health check
+- testing baseline
+- onboarding.md initialization
+
+### Phase 1: Identity and Catalog Foundation
+
+- Users schema
+- Auth module: register/login/JWT/roles
+- Categories module
+- Products module public browsing
+- admin product management
+- product/category caching
+- onboarding.md update
+
+### Phase 2: Cart and Ordering
+
+- Cart schema/service/resolver
+- add/update/remove cart items
+- order creation workflow
+- inventory checks
+- order snapshotting
+- onboarding.md update
+
+### Phase 3: Hardening and Admin Operations
+
+- admin order queries
+- inventory admin updates
+- exception filter/interceptors refinement
+- auth/security hardening
+- improved test coverage
+- onboarding.md update
+
+### Phase 4: Deployment Readiness
+
+- Docker production image polish
+- AWS deployment artifacts
+- environment split
+- observability/logging
+- CI/CD outline
+- onboarding.md update
+
 ## Current Phase Status
 
 Current completed phase work:
@@ -74,6 +125,18 @@ Why code-first was chosen:
 - easier incremental development
 - good fit for modular monolith architecture
 - interview-friendly for explaining DTO/resolver/service relationships
+
+## GitHub Project Structure
+
+From now on, before implement the task, a GitHub task card will be provided by Codex
+
+### Custom fields
+
+- `Status`: Backlog / To-do / In Progress / In Review / Done
+- `Type`: Epic / Task / Bug / Chore
+- `Priority`: High / Medium / Low
+- `Phase`: Phase 0 / Phase 1 / Phase 2 / Phase 3 / Phase 4
+- `Area`: Platform / Auth / Catalog / Cart / Orders / Inventory / DevEx / Infra / Testing
 
 ## Infrastructure Setup
 
@@ -326,5 +389,5 @@ Recommended context to mention in the prompt:
 Example:
 
 ```prompt
-now let's resume Phase N+1. Phase N is complete. Last completed task: PN-X onboarding.md. Next task: EPIC-N+1 title.
+now let's resume Phase N+1. Phase N is complete. Last completed task: PN-X onboarding.md. Next task: EPIC-N+1 title. Please refer to onboarding.md file and guide me implement Phase N+1 as senior SDE and offer interview takeaway. Donot implement the task directly but generate task card with project field suggestions and then the code step by step.
 ```
