@@ -12,6 +12,8 @@ import { jwtConfig } from './config/jwt.config';
 import { redisConfig } from './config/redis.config';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { HealthModule } from './health/health.module';
     DatabaseModule,
     CacheModule,
     HealthModule,
+    UsersModule,
+    AuthModule,
   ],
   providers: [AppResolver],
 })
