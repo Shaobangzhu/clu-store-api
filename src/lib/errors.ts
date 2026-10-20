@@ -1,0 +1,16 @@
+export type ErrorCode =
+  | 'VALIDATION_ERROR' | 'MALFORMED_JSON' | 'PAYLOAD_TOO_LARGE'
+  | 'UNSUPPORTED_MEDIA_TYPE' | 'CORS_ORIGIN_DENIED' | 'RATE_LIMITED'
+  | 'NOT_FOUND' | 'SERVICE_NOT_READY' | 'INTERNAL_ERROR';
+
+export class AppError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: ErrorCode,
+    message: string,
+    readonly details: unknown = null,
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
+}

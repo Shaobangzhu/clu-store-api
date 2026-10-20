@@ -1,6 +1,6 @@
 # CLU Store API — V1 contract
 
-**Status:** agreed target contract; no routes are implemented in this repository yet.
+**Status:** V1 target contract. P01 implements only `/health` and `/ready`; all business routes below remain planned.
 
 ## Response and money rules
 
@@ -62,3 +62,10 @@ Errors use stable codes such as `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`,
 Product list sort values: `newest` (default), `price_asc`, `price_desc`, `name_asc`, `name_desc`; deterministic ID tie-break. Search is bounded, trimmed and case-insensitive. No relevance ranking is defined.
 
 Checkout idempotency is scoped per user and route. Same key and request returns the same order, including after the cart is empty. Same key with a different fingerprint returns `409 IDEMPOTENCY_CONFLICT`. Checkout state mutation is all-or-nothing in PostgreSQL. Order state machine and security gates: [architecture.md](architecture.md).
+
+## P01 operational behavior
+
+`GET /health` returns `200` with `data: {status: "ok"}` and `meta: null`.
+`GET /ready` returns `503` with `error.code: "SERVICE_NOT_READY"`, a message stating that database readiness awaits P02, and `error.details: {database: "not_configured"}`. It never reports database success without a probe.
+
+Foundation error codes also include `NOT_FOUND` (404), `MALFORMED_JSON` (400), `PAYLOAD_TOO_LARGE` (413), `UNSUPPORTED_MEDIA_TYPE` (415 for unsupported body encodings), `CORS_ORIGIN_DENIED` (403), `RATE_LIMITED` (429), and `INTERNAL_ERROR` (500). Error envelopes have no success data/meta fields. `X-Request-Id` is server-generated on requests. CORS preflights and HTTP HEAD/204 responses have no JSON body.

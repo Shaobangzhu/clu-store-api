@@ -147,3 +147,11 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Local input material and database volumes
+local-input/
+local-data/
+.data/
+postgres-data/
+*.pem
+*.key

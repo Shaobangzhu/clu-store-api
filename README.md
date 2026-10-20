@@ -1,27 +1,40 @@
-# CLU Store API — Planning Deliverables
+# CLU Store API
 
-This is a **read-only design and implementation-planning package**, prepared on 2026-10-19 for:
+P01 provides an Express 5 / strict TypeScript / ESM HTTP foundation for Node 24 LTS. Catalog, auth, cart, orders, Prisma and PostgreSQL arrive in later phases.
 
-- Backend: https://github.com/Shaobangzhu/clu-store-api
-- Frontend: https://github.com/Shaobangzhu/clu-store-client
+## Local development
 
-No repository source, database schema, Docker Compose runtime, GitHub PR, or deployment was modified or executed by this package.
+Use Node 24 and npm 11, then run:
 
-## Contents
+```sh
+npm ci
+cp .env.example .env
+npm run dev
+```
 
-- `01_SOURCE_AUDIT.md` — exact inventory of seven supplied inputs, 17 original routes, current GitHub repo state, frontend incompatibilities and security issues.
-- `02_ARCHITECTURE_AND_API_CONTRACT.md` — tech/version decisions, database relations, pricing and order semantics, endpoint/response contract, Docker architecture, security gates.
-- `03_IMPLEMENTATION_ROADMAP.md` — 14-phase milestone plan, GPT model and Thinking effort matrix, dependencies and acceptance criteria.
-- `04_CODEX_PROMPTS.md` — complete P00–P13 copy/paste instructions, written in English for a coding agent.
-- `prompts/` — one Markdown file per implementation prompt, convenient for executing only the current phase.
+The default bind address is `127.0.0.1:3000`. Configure `HOST` explicitly for container access later. `.env` is ignored. See `.env.example` for validated configuration; `CORS_ORIGINS` accepts comma-separated exact HTTP(S) origins, and an empty value permits no browser cross-origin access. Requests without an Origin header are accepted.
 
-## Execution
+```sh
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm start
+```
 
-1. Open the **local** repo, not only remote GitHub. Compare its `git status` with the remote view and read any `AGENTS.md`.
-2. Provide the planning Markdown files (and the seven original inputs separately when needed) to Codex, but **do not commit the unsanitized Postman collection**.
-3. Execute `prompts/P00_*.md`, verify before `P01`, and continue one phase at a time.
-4. Use local Docker PostgreSQL; no cloud DB, no automatic push/PR/deploy.
+`src/app.ts` exports `createApp(config)` without binding a port. `src/server.ts` loads validated environment configuration, listens, and drains HTTP connections on SIGINT/SIGTERM with a bounded shutdown deadline. Development and start scripts load an optional `.env` using Node's native loader.
 
-**Material safety:** the uploaded original Postman contains bearer token-like strings and old server endpoints. No original tokens/IPs are copied into this deliverable package. Rebuilt Postman is scheduled only for P09.
+## Implemented operational endpoints
 
-**Important distinction:** the backend remote repository has only README and .gitignore; the developer's actual local working tree, Docker containers, and local Git modifications have **not** been inspected. Those checks are deliberately the first task of P00/P02.
+- `GET /health`: `200` with `{success:true,data:{status:"ok"},meta:null}`; process liveness only.
+- `GET /ready`: `503 SERVICE_NOT_READY` with `details.database = "not_configured"`; database readiness is pending P02.
+
+Unknown routes return an error envelope with `404 NOT_FOUND`. Only these two operational routes are implemented. Responses include a generated `X-Request-Id`; logs record request ID/method/status/duration without request bodies, headers or raw URLs. Helmet, allowlisted CORS, a JSON size cap and an in-memory generic rate limiter are enabled. Proxy trust is disabled; configure it deliberately before any reverse proxy or multi-process deployment.
+
+Reusable Zod validation accepts an object with `params`, `query` and/or `body` schemas. Parsed values and transforms are stored in `res.locals.validated`, preserving Express 5 request getters. The success helper is `res.locals.success(data, status?, meta?)`; error handling emits stable codes without exposing internal error messages.
+
+## Documentation and planning
+
+Current V1 decisions and compatibility constraints live in [docs/architecture.md](docs/architecture.md) and [docs/api-contract.md](docs/api-contract.md). See [docs/local-development.md](docs/local-development.md) for the P02 Docker/database plan and [docs/fixture-provenance.md](docs/fixture-provenance.md) for missing source inputs.
+
+The original planning package remains under `documents/`: source audit, architecture/API proposal, implementation roadmap and phase prompts. It describes historical sources and future work; it is not evidence that those features are implemented. Original Postman material contains sensitive bearer-like values and must not be committed.
