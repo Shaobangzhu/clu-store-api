@@ -1,6 +1,6 @@
 # CLU Store API — V1 architecture
 
-**Status:** P01 HTTP foundation implemented. Business domains and PostgreSQL remain planned; this document describes the V1 target.
+**Status:** P02 HTTP/database foundation implemented. Business services remain planned; this document describes the V1 target.
 
 ## Decisions
 

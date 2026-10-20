@@ -19,6 +19,11 @@ const schema = z.object({
   JSON_BODY_LIMIT_BYTES: integer(102400, 1048576),
   RATE_LIMIT_WINDOW_MS: integer(60000, 3600000),
   RATE_LIMIT_MAX: integer(100, 100000),
+  DATABASE_URL: z.string().url().refine((value) =>
+    value.startsWith('postgresql://') || value.startsWith('postgres://'),
+    'Must be a PostgreSQL connection URL',
+  ).optional(),
+  DB_CHECK_TIMEOUT_MS: integer(2000, 10000),
   SHUTDOWN_TIMEOUT_MS: integer(10000, 60000),
 });
 

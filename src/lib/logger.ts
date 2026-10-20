@@ -8,7 +8,8 @@ export function createLogger(config: Env) {
     redact: {
       paths: [
         'authorization', 'cookie', 'password', 'confirmPassword', 'ConfirmPassword',
-        'accessToken', 'token', 'secret', 'JWT_SECRET', 'DATABASE_URL',
+        'accessToken', 'token', 'secret', 'JWT_SECRET', 'DATABASE_URL', 'TEST_DATABASE_URL',
+        'POSTGRES_PASSWORD', 'CLU_DEV_PASSWORD', 'CLU_TEST_PASSWORD',
         '*.password', '*.confirmPassword', '*.ConfirmPassword', '*.accessToken',
         '*.token', '*.secret', 'req.headers.authorization', 'req.headers.cookie',
         'res.headers["set-cookie"]',

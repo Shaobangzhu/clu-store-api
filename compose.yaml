@@ -1,0 +1,24 @@
+name: clu-store-api-local
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: clu_bootstrap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a private bootstrap password in .env}
+      POSTGRES_DB: postgres
+      CLU_DEV_PASSWORD: ${CLU_DEV_PASSWORD:?Set a private development password in .env}
+      CLU_TEST_PASSWORD: ${CLU_TEST_PASSWORD:?Set a separate private test password in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/10-clu-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clu_bootstrap -d postgres && psql -U clu_bootstrap -d clu_store_dev -c 'SELECT 1' >/dev/null && psql -U clu_bootstrap -d clu_store_test -c 'SELECT 1' >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+volumes:
+  postgres_data:

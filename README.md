@@ -1,18 +1,21 @@
 # CLU Store API
 
-P01 provides an Express 5 / strict TypeScript / ESM HTTP foundation for Node 24 LTS. Catalog, auth, cart, orders, Prisma and PostgreSQL arrive in later phases.
+P02 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7 and local PostgreSQL 18. Catalog, auth, cart and order business endpoints arrive in later phases.
 
 ## Local development
 
-Use Node 24 and npm 11, then run:
+Use Node 24 and npm 11. First inspect existing Docker projects and ports as described in [local development](docs/local-development.md), then run:
 
 ```sh
 npm ci
-cp .env.example .env
+npm run env:local
+docker compose up -d --wait postgres
+npm run db:generate
+npm run db:migrate:dev
 npm run dev
 ```
 
-The default bind address is `127.0.0.1:3000`. Configure `HOST` explicitly for container access later. `.env` is ignored. See `.env.example` for validated configuration; `CORS_ORIGINS` accepts comma-separated exact HTTP(S) origins, and an empty value permits no browser cross-origin access. Requests without an Origin header are accepted.
+The default bind address is `127.0.0.1:3000`. Configure `HOST` explicitly for container access later. `env:local` generates private credentials into a new ignored `.env` and refuses to overwrite existing settings. See `.env.example` for validated configuration; `CORS_ORIGINS` accepts comma-separated exact HTTP(S) origins, and an empty value permits no browser cross-origin access. Requests without an Origin header are accepted.
 
 ```sh
 npm run lint
@@ -27,7 +30,7 @@ npm start
 ## Implemented operational endpoints
 
 - `GET /health`: `200` with `{success:true,data:{status:"ok"},meta:null}`; process liveness only.
-- `GET /ready`: `503 SERVICE_NOT_READY` with `details.database = "not_configured"`; database readiness is pending P02.
+- `GET /ready`: bounded real PostgreSQL check; `200` when reachable, `503 SERVICE_NOT_READY` on failure/timeout or missing database configuration.
 
 Unknown routes return an error envelope with `404 NOT_FOUND`. Only these two operational routes are implemented. Responses include a generated `X-Request-Id`; logs record request ID/method/status/duration without request bodies, headers or raw URLs. Helmet, allowlisted CORS, a JSON size cap and an in-memory generic rate limiter are enabled. Proxy trust is disabled; configure it deliberately before any reverse proxy or multi-process deployment.
 
@@ -35,6 +38,8 @@ Reusable Zod validation accepts an object with `params`, `query` and/or `body` s
 
 ## Documentation and planning
 
-Current V1 decisions and compatibility constraints live in [docs/architecture.md](docs/architecture.md) and [docs/api-contract.md](docs/api-contract.md). See [docs/local-development.md](docs/local-development.md) for the P02 Docker/database plan and [docs/fixture-provenance.md](docs/fixture-provenance.md) for missing source inputs.
+Current V1 decisions and compatibility constraints live in [docs/architecture.md](docs/architecture.md) and [docs/api-contract.md](docs/api-contract.md). See [docs/local-development.md](docs/local-development.md) for database roles, migrations, host/container URLs and guarded test workflows and [docs/fixture-provenance.md](docs/fixture-provenance.md) for missing source inputs.
 
 The original planning package remains under `documents/`: source audit, architecture/API proposal, implementation roadmap and phase prompts. It describes historical sources and future work; it is not evidence that those features are implemented. Original Postman material contains sensitive bearer-like values and must not be committed.
+
+Database verification uses `npm run db:migrate:test` and `npm run db:smoke` against a separately guarded test database. No reset is automated. The initial schema, including order snapshots and monetary Decimal fields, is in `prisma/schema.prisma`; P02 results are recorded in [docs/p02-verification.md](docs/p02-verification.md).

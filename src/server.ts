@@ -1,10 +1,12 @@
+import { createDatabase } from './lib/database.js';
 import { createApp } from './app.js';
 import { parseEnv } from './config/env.js';
 import { createLogger } from './lib/logger.js';
 
 const config = parseEnv(process.env);
 const logger = createLogger(config);
-const server = createApp(config, logger).listen(config.PORT, config.HOST, () => {
+const database = config.DATABASE_URL ? createDatabase(config.DATABASE_URL, config.DB_CHECK_TIMEOUT_MS) : undefined;
+const server = createApp(config, logger, database?.check).listen(config.PORT, config.HOST, () => {
   logger.info({ host: config.HOST, port: config.PORT }, 'HTTP server listening');
 });
 server.requestTimeout = 30000;
@@ -13,6 +15,7 @@ server.keepAliveTimeout = 5000;
 server.on('error', () => {
   logger.fatal('HTTP server failed');
   process.exitCode = 1;
+  void database?.disconnect().catch(() => logger.error('Database shutdown failed'));
 });
 
 let shuttingDown = false;
@@ -27,9 +30,18 @@ function shutdown(signal: string) {
   }, config.SHUTDOWN_TIMEOUT_MS);
   deadline.unref();
   server.close((error) => {
-    clearTimeout(deadline);
-    process.exitCode = error ? 1 : 0;
-    logger.info('HTTP server stopped');
+    void (async () => {
+      try {
+        await database?.disconnect();
+        process.exitCode = error ? 1 : 0;
+        logger.info('HTTP server and database pool stopped');
+      } catch {
+        process.exitCode = 1;
+        logger.error('Database shutdown failed');
+      } finally {
+        clearTimeout(deadline);
+      }
+    })();
   });
 }
 process.once('SIGTERM', () => shutdown('SIGTERM'));

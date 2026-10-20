@@ -155,3 +155,6 @@ local-data/
 postgres-data/
 *.pem
 *.key
+
+# Regenerated from the pinned Prisma schema/client
+src/generated/prisma/
