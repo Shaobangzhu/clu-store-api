@@ -71,3 +71,9 @@ npm run db:readiness:smoke -- 200
 All six response JSON files are now reconciled. This is labeled sample/demo data; ten summary-only products have no active sellable configuration. See [fixture-provenance.md](fixture-provenance.md) before changing or publishing catalog data. `/media/demo-placeholder.svg` is a local asset for P04 to serve; no static/business route is added here.
 
 `npm run db:seed:verify -- before`, `-- after-first`, and `-- after-second` query actual database data and write exclusive snapshots under ignored `local-data/p03-seed-verification/`. The two post-seed snapshots must match in counts, IDs, values, relationships and sequence positions (automatic timestamps excluded). They also check unchanged user/cart/order counts. Existing verification files are preserved; archive them yourself before starting a new verification cycle. Set a distinct `SEED_VERIFY_RUN` such as `response-samples-v1` for a new run directory; earlier snapshots are preserved. Current results are in [p03-sample-reconciliation.md](p03-sample-reconciliation.md).
+
+## P04 public read verification
+
+Run `npm run db:migrate:test` followed by `npm run test:integration` after the database is healthy. This suite requires both database URLs, validates the actual test role/database, creates synthetic catalog/content fixtures inside individual Repeatable Read transactions and intentionally rolls each one back. A final count check confirms that category/product/configuration/marketing/support counts are unchanged. No test resets or seeds the development database. Default `npm test` excludes the integration directory explicitly; both suites are required for a full P04 check.
+
+The runtime injects one Prisma client through the catalog read adapter. Product count/page/configuration reads share a snapshot; controllers have no direct database calls. `/media/demo-placeholder.svg` now serves the existing reviewed asset. See [p04-verification.md](p04-verification.md).

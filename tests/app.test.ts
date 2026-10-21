@@ -49,7 +49,7 @@ describe('HTTP foundation', () => {
   });
 
   it('returns a stable 404 envelope for unimplemented business routes', async () => {
-    const res = await request(createApp(config)).get('/api/products');
+    const res = await request(createApp(config)).get('/api/not-a-route');
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ success: false, error: {
       code: 'NOT_FOUND', message: 'Route not found', details: null,
@@ -128,4 +128,17 @@ describe('environment validation', () => {
     expect(() => parseEnv({ CORS_ORIGINS: '*' })).toThrow('CORS_ORIGINS');
     expect(() => parseEnv({ CORS_ORIGINS: 'https://example.com/path' })).toThrow('CORS_ORIGINS');
   });
+});
+
+it('reports a configured public read route as unavailable when no database is injected', async () => {
+  const res = await request(createApp(config)).get('/api/products');
+  expect(res.status).toBe(503);
+  expect(res.body.error.code).toBe('SERVICE_NOT_READY');
+});
+it('serves only the reviewed local placeholder asset', async () => {
+  const app = createApp(config);
+  const asset = await request(app).get('/media/demo-placeholder.svg');
+  expect(asset.status).toBe(200);
+  expect(asset.headers['content-type']).toContain('image/svg+xml');
+  expect((await request(app).get('/media/.env')).status).toBe(404);
 });

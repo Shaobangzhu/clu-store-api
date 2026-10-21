@@ -1,6 +1,6 @@
 # CLU Store API — V1 architecture
 
-**Status:** P03 HTTP/database foundation and sample-backed demo seed implemented. Business services remain planned; this document describes the V1 target.
+**Status:** P04 public catalog/category/support reads, HTTP/database foundation and sample-backed demo seed implemented. Auth/cart/order services remain planned; this document describes the V1 target.
 
 ## Decisions
 

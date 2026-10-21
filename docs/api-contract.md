@@ -1,6 +1,6 @@
 # CLU Store API — V1 contract
 
-**Status:** V1 target contract. P02 implements only `/health` and `/ready`; all business routes below remain planned.
+**Status:** P04 implements the seven public catalog/category/support reads plus `/health` and `/ready`. Authentication, cart, order and documentation UI routes below remain future V1 work.
 
 ## Response and money rules
 
@@ -69,3 +69,43 @@ Checkout idempotency is scoped per user and route. Same key and request returns 
 `GET /ready` performs a bounded real PostgreSQL query. It returns `200` with `data: {status: "ready", database: "up"}` and `meta: null` on success. Failure/timeout returns `503 SERVICE_NOT_READY` with `details: {database: "unavailable"}`; missing database configuration returns the same code with `database: "not_configured"`. Errors expose no connection details. Responses use `Cache-Control: no-store`. This checks connectivity, not migration currency.
 
 Foundation error codes also include `NOT_FOUND` (404), `MALFORMED_JSON` (400), `PAYLOAD_TOO_LARGE` (413), `UNSUPPORTED_MEDIA_TYPE` (415 for unsupported body encodings), `CORS_ORIGIN_DENIED` (403), `RATE_LIMITED` (429), and `INTERNAL_ERROR` (500). Error envelopes have no success data/meta fields. `X-Request-Id` is server-generated on requests. CORS preflights and HTTP HEAD/204 responses have no JSON body.
+
+## P04 public read details
+
+All seven API routes return the success envelope with `meta: null`, except the paginated product list. Missing rows use error envelopes: `PRODUCT_NOT_FOUND`, `CATEGORY_NOT_FOUND`, or `INFORMATION_NOT_FOUND` (404). Malformed input uses `400 VALIDATION_ERROR`. A missing database dependency returns `503 SERVICE_NOT_READY`; internal errors do not reveal SQL, connection URLs or stack traces.
+
+### Products and queries
+
+`GET /api/products` accepts only `keyword`, `category`, `page`, `pageSize`, and `sort`. Unknown/repeated parameters and arrays are rejected. Page/pageSize are plain positive decimal integers (no signs, fractions, exponents or leading zeros): page defaults to 1, max 10000; pageSize defaults to 20, max 100. Keyword/category inputs allow at most 200 raw characters and 100 after trimming; control characters are rejected. Blank keyword means no search filter; blank category is invalid.
+
+Keyword matches product name, title, category title or category slug, case-insensitively. Search text is a literal substring: SQL LIKE wildcard characters are escaped. The optional category filter resolves a case-insensitive title or slug, with title taking precedence; any case-insensitive identity tie uses ascending ID. Keyword and category filters combine with AND. Unknown category filters return an empty product list rather than a category error.
+
+Sort choices remain `newest`, `price_asc`, `price_desc`, `name_asc`, `name_desc`. Newest orders by `createdAt DESC`; price uses the database Decimal starting price; name uses PostgreSQL collation. All primary sorts use ascending numeric ID as a deterministic tie break. Count, page rows and their nested configurations are read in one Repeatable Read database snapshot. No results give `data: []`, `total: 0`, `totalPages: 0`. Pages beyond the last return `[]` while retaining the actual count/page metadata.
+
+List and detail data preserve these public keys:
+
+- `id`, `name`, `title`, `image`, `carouselImages`, `features`, `inStock`, and category title string or null.
+- `startingPrice` and nullable `installments`: fixed two-decimal strings, never JSON numbers.
+- `models`: `{id,name,specification,price,inStock}`, with price as the **complete model base price** string.
+- `memorySizes`: `{id,name,price,inStock}`, with price as the **incremental upgrade** string; internal `extraPrice` is not exposed.
+- `colors`: names only, not internal color rows/IDs.
+
+Only active model/memory/color records are exposed. Retired compatibility options remain stored but cannot appear as purchasable options. Summary-only unavailable products may have empty configuration arrays. Product `inStock` is its stored availability flag and is independent of marketing `soldOut`. Unit pricing in later checkout is model base plus memory increment; `startingPrice` is never added again. Catalog reads do not calculate a checkout or accept a price from the client.
+
+`GET /api/products/:id` accepts only a positive integer within PostgreSQL Int32 range. Static `/offers` and `/newarrivals` are registered before `/:id`. Invalid IDs/encoding produce 400; valid missing IDs produce 404.
+
+### Categories and editorial content
+
+`GET /api/categories` returns `{id,title,slug,subTitle}` navigation rows ordered by ID. `GET /api/categories/:title` accepts one URL-decoded title or slug, at most 128 decoded characters, trimmed, without slashes/backslashes/control characters. Express decodes it exactly once; double-encoded text is not decoded again. Unknown detail categories return 404.
+
+Category landing data contains navigation fields, `videos`, editorial `features`, and product summaries ordered by ID. Editorial images are exposed as `features[].image`, mapped from internal JSON `imageSrc`. Product summaries contain `id,name,title,image,startingPrice,installments,features,inStock`. Empty/missing video content becomes null; the source video object may retain its ID with null source URLs when no reusable video exists. No remote video is invented or fetched.
+
+### Offers, arrivals, support and media
+
+Offers require `active: true` and schedule eligibility: null start/end is unbounded; start is inclusive (`startsAt <= now`), end exclusive (`endsAt > now`). Ordering is ascending ID. P03's historical offers remain inactive, so the current demo returns no offers. The API does not activate campaigns or infer current eligibility from historical marketing text. Offer DTOs retain `type,title,detail,image,soldOut` plus ID and nullable linked product ID.
+
+Arrivals are ordered by `displayOrder ASC, id ASC`, retain `title,detail,image,textColor,soldOut`, and include ID/nullable product ID. A card may be editorial; display state never changes product stock.
+
+Support selects the controlled `support` / `zh-CN` record and returns `data: {html,locale}`. Stored HTML is capped at 100000 characters and sanitized on every read. Allowed tags are `section,h1,h2,h3,p,ul,ol,li,strong,em,br,code`, with no attributes or links. Scripts/styles/frames/SVG/math and their active contents are discarded. Missing content returns `INFORMATION_NOT_FOUND`; no arbitrary fallback/legal page is invented. The frontend should still sanitize HTML at render.
+
+Media paths in public DTOs are local `/media/` paths. `GET /media/demo-placeholder.svg` serves only the reviewed original placeholder file; it is an image response outside the JSON API envelope. Other files/directories are not exposed. HEAD/conditional HTTP responses retain standard bodyless semantics.

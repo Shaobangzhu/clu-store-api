@@ -1,4 +1,9 @@
 import express from 'express';
+import { fileURLToPath } from 'node:url';
+import type { CatalogDatabase } from './lib/catalog-database.js';
+import { productsRouter } from './modules/products/routes.js';
+import { categoriesRouter } from './modules/categories/routes.js';
+import { informationRouter } from './modules/information/routes.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
@@ -11,12 +16,17 @@ import { requestId } from './middleware/request-id.js';
 import { envelope } from './middleware/envelope.js';
 import { errorHandler } from './middleware/error-handler.js';
 
-export function createApp(config: Env, logger: Logger = createLogger(config), databaseProbe?: () => Promise<void>) {
+export interface AppDependencies {
+  catalog?: CatalogDatabase;
+  now?: () => Date;
+}
+export function createApp(config: Env, logger: Logger = createLogger(config), databaseProbe?: () => Promise<void>, dependencies: AppDependencies = {}) {
   const checkDatabase = databaseProbe ? boundedReadiness(databaseProbe, config.DB_CHECK_TIMEOUT_MS) : undefined;
   const app = express();
   app.disable('x-powered-by');
   app.enable('case sensitive routing');
   app.set('trust proxy', false);
+  app.set('json escape', true);
   app.use(requestId, envelope, helmet());
   app.use((req, res, next) => {
     const start = performance.now();
@@ -56,6 +66,14 @@ export function createApp(config: Env, logger: Logger = createLogger(config), da
         { database: 'unavailable' });
     }
     res.locals.success({ status: 'ready', database: 'up' });
+  });
+  app.use('/api/products', productsRouter(dependencies.catalog, dependencies.now ?? (() => new Date())));
+  app.use('/api/categories', categoriesRouter(dependencies.catalog));
+  app.use('/api/information', informationRouter(dependencies.catalog));
+  app.get('/media/demo-placeholder.svg', (_req, res, next) => {
+    res.sendFile(fileURLToPath(new URL('../public/media/demo-placeholder.svg', import.meta.url)), (error) => {
+      if (error) next(error);
+    });
   });
   app.use((_req, _res, next) => next(new AppError(404, 'NOT_FOUND', 'Route not found')));
   app.use(errorHandler(logger));

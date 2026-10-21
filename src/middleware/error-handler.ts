@@ -11,6 +11,8 @@ export function errorHandler(logger: Logger): ErrorRequestHandler {
     let publicError = new AppError(500, 'INTERNAL_ERROR', 'Internal server error');
     if (error instanceof AppError) {
       publicError = error;
+    } else if (error instanceof URIError) {
+      publicError = new AppError(400, 'VALIDATION_ERROR', 'Invalid path encoding');
     } else if (typeof error === 'object' && error !== null && 'type' in error) {
       if (error.type === 'entity.parse.failed') {
         publicError = new AppError(400, 'MALFORMED_JSON', 'Malformed JSON body');

@@ -1,3 +1,4 @@
+import { createCatalogDatabase } from './lib/catalog-database.js';
 import { createDatabase } from './lib/database.js';
 import { createApp } from './app.js';
 import { parseEnv } from './config/env.js';
@@ -6,7 +7,7 @@ import { createLogger } from './lib/logger.js';
 const config = parseEnv(process.env);
 const logger = createLogger(config);
 const database = config.DATABASE_URL ? createDatabase(config.DATABASE_URL, config.DB_CHECK_TIMEOUT_MS) : undefined;
-const server = createApp(config, logger, database?.check).listen(config.PORT, config.HOST, () => {
+const server = createApp(config, logger, database?.check, database ? { catalog: createCatalogDatabase(database.client) } : {}).listen(config.PORT, config.HOST, () => {
   logger.info({ host: config.HOST, port: config.PORT }, 'HTTP server listening');
 });
 server.requestTimeout = 30000;

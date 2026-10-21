@@ -1,6 +1,6 @@
 # CLU Store API
 
-P03 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Catalog, auth, cart and order business endpoints arrive in later phases.
+P04 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads are implemented. Authentication, carts and orders arrive in later phases.
 
 ## Local development
 
@@ -22,6 +22,8 @@ The default bind address is `127.0.0.1:3000`. Configure `HOST` explicitly for co
 npm run lint
 npm run typecheck
 npm test
+npm run db:migrate:test
+npm run test:integration
 npm run build
 npm start
 ```
@@ -33,7 +35,7 @@ npm start
 - `GET /health`: `200` with `{success:true,data:{status:"ok"},meta:null}`; process liveness only.
 - `GET /ready`: bounded real PostgreSQL check; `200` when reachable, `503 SERVICE_NOT_READY` on failure/timeout or missing database configuration.
 
-Unknown routes return an error envelope with `404 NOT_FOUND`. Only these two operational routes are implemented. Responses include a generated `X-Request-Id`; logs record request ID/method/status/duration without request bodies, headers or raw URLs. Helmet, allowlisted CORS, a JSON size cap and an in-memory generic rate limiter are enabled. Proxy trust is disabled; configure it deliberately before any reverse proxy or multi-process deployment.
+Unknown routes return an error envelope with `404 NOT_FOUND`. The seven public read routes below are also implemented. Responses include a generated `X-Request-Id`; logs record request ID/method/status/duration without request bodies, headers or raw URLs. Helmet, allowlisted CORS, a JSON size cap and an in-memory generic rate limiter are enabled. Proxy trust is disabled; configure it deliberately before any reverse proxy or multi-process deployment.
 
 Reusable Zod validation accepts an object with `params`, `query` and/or `body` schemas. Parsed values and transforms are stored in `res.locals.validated`, preserving Express 5 request getters. The success helper is `res.locals.success(data, status?, meta?)`; error handling emits stable codes without exposing internal error messages.
 
@@ -46,3 +48,15 @@ The original planning package remains under `documents/`: source audit, architec
 Database verification uses `npm run db:migrate:test` and `npm run db:smoke` against a separately guarded test database. No reset is automated. The initial schema, including order snapshots and monetary Decimal fields, is in `prisma/schema.prisma`; P02 results are recorded in [docs/p02-verification.md](docs/p02-verification.md).
 
 P03 now reconciles all six supplied response samples: 7 complete sample products, 10 unavailable summary-only products and 8 supplemental frontend demo products. Source product IDs 2, 6, 7, 15, 22, 31 and 42 and their model/memory IDs are preserved. Earlier fallback records are reconciled using guarded ID corrections; inactive compatibility options are retained. All media uses an original local placeholder; support text is original and escaped. Historical offers remain inactive. See [sample reconciliation](docs/p03-sample-reconciliation.md) and [fixture provenance](docs/fixture-provenance.md).
+
+## Public read API (P04)
+
+- `GET /api/products/offers`, `GET /api/products/newarrivals`
+- `GET /api/products` with keyword/category/page/pageSize/sort filters
+- `GET /api/products/:id`
+- `GET /api/categories`, `GET /api/categories/:title` (title or slug)
+- `GET /api/information/support`
+
+All JSON responses use the documented envelope. Monetary DTO values are two-decimal strings; memory option price is an increment over the full model base price. Support is sanitized on read. Historical offers remain inactive, and unavailable summary-only products have no active configurations. The reviewed placeholder is served at `/media/demo-placeholder.svg`.
+
+`npm test` runs database-independent regressions. `npm run test:integration` requires the guarded local test database and uses real PostgreSQL with rollback-only fixtures; it fails rather than silently skipping when configuration/access is unavailable. See [P04 verification](docs/p04-verification.md) and [the read contract](docs/api-contract.md#p04-public-read-details).
