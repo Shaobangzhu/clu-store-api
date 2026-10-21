@@ -1,6 +1,6 @@
 # CLU Store API
 
-P04 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads are implemented. Authentication, carts and orders arrive in later phases.
+P05 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads are implemented. Registration, login, JWT authentication and role guards are implemented. Carts and orders arrive in later phases.
 
 ## Local development
 
@@ -59,4 +59,15 @@ P03 now reconciles all six supplied response samples: 7 complete sample products
 
 All JSON responses use the documented envelope. Monetary DTO values are two-decimal strings; memory option price is an increment over the full model base price. Support is sanitized on read. Historical offers remain inactive, and unavailable summary-only products have no active configurations. The reviewed placeholder is served at `/media/demo-placeholder.svg`.
 
-`npm test` runs database-independent regressions. `npm run test:integration` requires the guarded local test database and uses real PostgreSQL with rollback-only fixtures; it fails rather than silently skipping when configuration/access is unavailable. See [P04 verification](docs/p04-verification.md) and [the read contract](docs/api-contract.md#p04-public-read-details).
+`npm test` runs database-independent regressions. `npm run test:integration` requires the guarded local test database and uses real PostgreSQL with rollback-only catalog fixtures and narrowly cleaned-up authentication identities; it fails rather than silently skipping when configuration/access is unavailable. See [P04 verification](docs/p04-verification.md) and [the read contract](docs/api-contract.md#p04-public-read-details).
+
+
+## Authentication (P05)
+
+`POST /api/auth/register` requires `{username,email,password,confirmPassword}` and returns a safe USER record. `POST /api/auth/login` accepts `{identifier,password}` (username or email) and returns `{user,token,tokenType,expiresIn,expiresAt}` inside `data`. The legacy `ConfirmPassword` registration field and login `username` alias remain accepted with deprecation metadata. Neither route returns a password hash.
+
+Configure `JWT_SECRET` as 32 cryptographically random bytes encoded as 64 hex characters, plus `JWT_ISSUER`, `JWT_AUDIENCE` and `JWT_TTL_SECONDS` (default 900). `env:local` supplies a random key for **new** `.env` files; existing files are preserved and need the new key added explicitly. Missing secret disables authentication with 503 in development/test and rejects production startup. Invalid supplied secrets always reject startup.
+
+Argon2id hashes use 64 MiB, three passes and one lane. Auth limits apply per IP before JSON parsing and per normalized identifier; passwords, hashes, bodies and headers are excluded/redacted in logs. Reusable `requireAuth` loads the current database user/role on every protected request, and `requireRole('ADMIN')` checks that role. P05 adds no cart/order routes.
+
+Provision an administrator explicitly with `npm run admin:create`, operator-provided JSON credentials on stdin and `ADMIN_DATABASE_NAME` matching the chosen database. This CLI only creates accounts and never overwrites or promotes an existing user. See [auth contract](docs/api-contract.md#p05-authentication), [local setup and CLI](docs/local-development.md#p05-authentication-setup), and [verification/security limits](docs/p05-verification.md).

@@ -26,6 +26,7 @@ export function errorHandler(logger: Logger): ErrorRequestHandler {
       // Do not serialize unknown errors: they may contain bodies, SQL or credentials.
       logger.error({ requestId: res.locals.requestId, code: publicError.code }, 'Request failed');
     }
+    if (publicError.status === 401) res.setHeader('WWW-Authenticate', 'Bearer');
     res.status(publicError.status).json({
       success: false,
       error: { code: publicError.code, message: publicError.message, details: publicError.details },

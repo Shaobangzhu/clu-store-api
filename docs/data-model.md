@@ -50,3 +50,8 @@ The initial migration contains the SQL checks/functional indexes that Prisma can
 ## P03 demo data
 
 The schema is unchanged. The reconciled seed preserves all seven complete response product IDs and their model/memory IDs. It corrects prior fallback IDs 1001 to 7 and 1002 to 8 only after checking the frozen prior data. Product 2 is normalized into demo Phones category 1. All 16 category summaries are present; the ten without complete sample options are unavailable, and no active configurations are fabricated for them. Supplemental frontend configurations remain labeled demo choices. Replaced configurations are retained inactive to preserve references. See [fixture-provenance.md](fixture-provenance.md).
+
+
+## P05 identity enforcement
+
+No schema changes are required. Public registration stores trimmed, lowercase ASCII usernames/emails and uses the existing normalized unique indexes; concurrent unique violations become one generic account conflict. Credential lookup is parameterized and uses the same `lower(btrim(...))` expressions. The API chooses USER regardless of client intent and rejects unknown role fields. Only the explicit admin CLI chooses ADMIN. Existing accounts are not rewritten or promoted. Argon2id hashes stay internal; role authorization reads the current User row for each protected request. [Full identity policy](api-contract.md#identities-and-passwords).

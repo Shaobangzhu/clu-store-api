@@ -1,6 +1,6 @@
 # CLU Store API — V1 architecture
 
-**Status:** P04 public catalog/category/support reads, HTTP/database foundation and sample-backed demo seed implemented. Auth/cart/order services remain planned; this document describes the V1 target.
+**Status:** P05 registration/login, JWT verification and role guards are implemented alongside P04 public reads, the HTTP/database foundation and demo seed. Cart/order services remain planned; this document describes the V1 target.
 
 ## Decisions
 
@@ -67,3 +67,12 @@ Each status change and its history row commit atomically. Conditional transition
 P00: local baseline recorded and reconciled contract docs exist, with absent inputs called out. P01–P02: runnable foundation and reviewed schema/migrations against isolated PostgreSQL. P03–P04: provenance-backed catalog and public routes. P05–P08: authentication, owned cart, atomic checkout and admin order workflow verified against PostgreSQL. P09–P11: OpenAPI/sanitized collection, integration/security gates, Compose and CI. P12: separately verified frontend adapter and end-to-end flows. P13: final contract/security audit and V1 freeze. A phase is done only with actual command outcomes and scoped change review; backend completion alone does not establish frontend integration.
 
 See [api-contract.md](api-contract.md), [data-model.md](data-model.md), [fixture-provenance.md](fixture-provenance.md), and [local-development.md](local-development.md).
+
+
+## P05 authentication boundary
+
+`src/modules/auth` owns request schemas, the account repository, password hashing, JWT signing/verification, services and route controllers. `src/middleware/auth.ts` exports `requireAuth` and `requireRole`. `server.ts` creates the service from the database and validated environment; the app accepts it as a dependency. No production probe route is added solely to demonstrate authorization.
+
+The original case-insensitive functional unique indexes remain authoritative. Registration can only create USER; `scripts/create-admin.ts` is an explicit create-only operator path using a password from stdin and an explicit database-name confirmation. The seed never creates an administrator. The API selects or serializes safe user fields explicitly; password hashes only enter credential verification.
+
+Argon2id and JOSE versions are pinned in the lockfile. JWT uses an environment-managed 256-bit HS256 key with issuer/audience checks and a 15-minute default expiration. Every protected request re-fetches the role. Per-IP/per-identifier limits and bounded hashing protect a single process; shared limiting, TLS, proxy configuration and token lifecycle enhancements remain deployment gates. Exact policies, residual risks and P06 handoff are in [the auth contract](api-contract.md#p05-authentication) and [verification](p05-verification.md).

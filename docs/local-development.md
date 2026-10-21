@@ -77,3 +77,33 @@ All six response JSON files are now reconciled. This is labeled sample/demo data
 Run `npm run db:migrate:test` followed by `npm run test:integration` after the database is healthy. This suite requires both database URLs, validates the actual test role/database, creates synthetic catalog/content fixtures inside individual Repeatable Read transactions and intentionally rolls each one back. A final count check confirms that category/product/configuration/marketing/support counts are unchanged. No test resets or seeds the development database. Default `npm test` excludes the integration directory explicitly; both suites are required for a full P04 check.
 
 The runtime injects one Prisma client through the catalog read adapter. Product count/page/configuration reads share a snapshot; controllers have no direct database calls. `/media/demo-placeholder.svg` now serves the existing reviewed asset. See [p04-verification.md](p04-verification.md).
+
+
+## P05 authentication setup
+
+New `npm run env:local` files include a random 256-bit `JWT_SECRET`. Existing `.env` files are never replaced. Add a securely generated 64-hex key to an existing ignored `.env` or inject it from your secret manager, then restart the server. Do not copy `.env.example`'s placeholder as a real key. `JWT_ISSUER=clu-store-api`, `JWT_AUDIENCE=clu-store-client` and `JWT_TTL_SECONDS=900` are the defaults; keep issuer/audience consistent with the intended client.
+
+With no `JWT_SECRET`, development/test can still serve catalog/liveness, while registration/login return 503 and startup logs that authentication is disabled. Production requires the key. Any supplied invalid key fails environment validation without logging its value. `/ready` continues to report database connectivity only; it is not an authentication-configuration probe.
+
+The admin CLI reads at most 4096 bytes of JSON from stdin, using canonical `{username,email,password,confirmPassword}` only. Supply your own long password, preferably through a password manager's pipe. For a private input file kept in the ignored `local-input/` directory with owner-only permissions:
+
+```sh
+ADMIN_DATABASE_NAME=clu_store_dev npm run admin:create < local-input/admin-credentials.json
+```
+
+This is an explicit command, not a startup/seed hook. It checks the configured URL database and actual connected database against `ADMIN_DATABASE_NAME`, hashes the password and creates a new ADMIN. The CLI does not accept a password argument or password environment variable, never prints credentials/hashes, and never overwrites a duplicate user or promotes an existing account. It prints only safe account fields. Remove private input material when no longer needed. No development admin was provisioned during implementation.
+
+Authentication integration tests require the same guarded `clu_store_test`/`clu_test` target as P04:
+
+```sh
+npm run db:migrate:test
+npm run test:integration -- tests/integration/auth.test.ts tests/integration/public-reads.test.ts
+npm test
+npm run lint
+npm run typecheck
+npm run build
+```
+
+The auth suite generates a fresh signing key/password per run, creates uniquely named test users and performs real concurrent inserts. Its finalizer deletes only the exact usernames allocated by that run and asserts the user count equals the initial count. CLI verification creates an admin only in the test database and removes it afterward. It never resets/truncates the database or touches development accounts. Catalog fixtures still roll back. A force-killed test process can leave its prefixed test users; inspect those identities explicitly rather than resetting shared data.
+
+`npm test` includes configuration, Pino redaction, malformed-JSON rate limiting and bounded-password-work checks without a database. Supertest still needs permission to bind localhost. See [P05 verification](p05-verification.md) for actual command outcomes and [the auth contract](api-contract.md#p05-authentication) for token/lifecycle limitations.

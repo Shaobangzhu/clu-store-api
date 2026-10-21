@@ -4,6 +4,8 @@ import type { CatalogDatabase } from './lib/catalog-database.js';
 import { productsRouter } from './modules/products/routes.js';
 import { categoriesRouter } from './modules/categories/routes.js';
 import { informationRouter } from './modules/information/routes.js';
+import { authRouter, authIpLimiter } from './modules/auth/routes.js';
+import type { AuthService } from './modules/auth/service.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
@@ -19,6 +21,7 @@ import { errorHandler } from './middleware/error-handler.js';
 export interface AppDependencies {
   catalog?: CatalogDatabase;
   now?: () => Date;
+  auth?: AuthService;
 }
 export function createApp(config: Env, logger: Logger = createLogger(config), databaseProbe?: () => Promise<void>, dependencies: AppDependencies = {}) {
   const checkDatabase = databaseProbe ? boundedReadiness(databaseProbe, config.DB_CHECK_TIMEOUT_MS) : undefined;
@@ -51,6 +54,7 @@ export function createApp(config: Env, logger: Logger = createLogger(config), da
     legacyHeaders: false,
     handler: (_req, _res, next) => next(new AppError(429, 'RATE_LIMITED', 'Too many requests')),
   }));
+  app.use('/api/auth', authIpLimiter(config));
   app.use(express.json({ limit: config.JSON_BODY_LIMIT_BYTES }));
   app.get('/health', (_req, res) => res.locals.success({ status: 'ok' }));
   app.get('/ready', async (_req, res) => {
@@ -70,6 +74,7 @@ export function createApp(config: Env, logger: Logger = createLogger(config), da
   app.use('/api/products', productsRouter(dependencies.catalog, dependencies.now ?? (() => new Date())));
   app.use('/api/categories', categoriesRouter(dependencies.catalog));
   app.use('/api/information', informationRouter(dependencies.catalog));
+  app.use('/api/auth', authRouter(dependencies.auth, config));
   app.get('/media/demo-placeholder.svg', (_req, res, next) => {
     res.sendFile(fileURLToPath(new URL('../public/media/demo-placeholder.svg', import.meta.url)), (error) => {
       if (error) next(error);

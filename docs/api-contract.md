@@ -1,6 +1,6 @@
 # CLU Store API — V1 contract
 
-**Status:** P04 implements the seven public catalog/category/support reads plus `/health` and `/ready`. Authentication, cart, order and documentation UI routes below remain future V1 work.
+**Status:** P05 implements registration/login and reusable JWT/role guards alongside the seven P04 public reads and `/health`/`/ready`. Cart, order and documentation UI routes remain future V1 work.
 
 ## Response and money rules
 
@@ -109,3 +109,45 @@ Arrivals are ordered by `displayOrder ASC, id ASC`, retain `title,detail,image,t
 Support selects the controlled `support` / `zh-CN` record and returns `data: {html,locale}`. Stored HTML is capped at 100000 characters and sanitized on every read. Allowed tags are `section,h1,h2,h3,p,ul,ol,li,strong,em,br,code`, with no attributes or links. Scripts/styles/frames/SVG/math and their active contents are discarded. Missing content returns `INFORMATION_NOT_FOUND`; no arbitrary fallback/legal page is invented. The frontend should still sanitize HTML at render.
 
 Media paths in public DTOs are local `/media/` paths. `GET /media/demo-placeholder.svg` serves only the reviewed original placeholder file; it is an image response outside the JSON API envelope. Other files/directories are not exposed. HEAD/conditional HTTP responses retain standard bodyless semantics.
+
+
+## P05 authentication
+
+These are deliberate V1 policies, not inferred fields from historical samples. The canonical request and response bodies are:
+
+| Route | Request body | Success `data` |
+|---|---|---|
+| `POST /api/auth/register` | `{username,email,password,confirmPassword}` | `201 {id,username,email,role,createdAt}` |
+| `POST /api/auth/login` | `{identifier,password}` | `200 {user:{id,username,email,role,createdAt},token,tokenType,expiresIn,expiresAt}` |
+
+Both use `{success:true,data,meta}` with `meta:null` normally and `Cache-Control: no-store`. UUID user IDs are strings; dates are ISO timestamps. Registration always assigns USER, rejects a supplied role/unknown fields, and does not automatically log in. Login's `tokenType` is `Bearer`, `expiresIn` is integer seconds, and `expiresAt` agrees with the JWT expiration. No password, confirmation, hash, connection settings or signing key is serialized. Neither endpoint accepts query parameters.
+
+### Identities and passwords
+
+Username and email are trimmed and lowercased before storage and lookup. Usernames are ASCII, 3–32 characters, start with a letter/digit, and thereafter allow letters/digits/dot/underscore/hyphen (raw input capped at 100). Email is required, Zod-validated ASCII email, at most 254 characters after normalization (raw cap 300); its local part is deliberately case-insensitive in V1. Unicode usernames/internationalized email and implicit Gmail-style dot/plus equivalence are unsupported. This avoids Unicode case-fold/collation ambiguities without inventing missing legacy email data.
+
+The existing PostgreSQL unique indexes on `lower(btrim(username))` and `lower(btrim(email))` enforce uniqueness, including concurrent registrations. Parameterized login lookups use those same expressions. An identifier containing `@` is an email; otherwise it is a username. Login input is capped at 300 raw/254 normalized characters. `%`, `_` and SQL-looking input are treated literally, never interpolated SQL. No schema migration or existing account rewrite is needed.
+
+New passwords require 15–128 JavaScript string code units, including at least 15 after excluding leading/trailing whitespace for the length check. The original password is hashed unchanged; spaces and Unicode are supported. Single-character repetition and a small explicit common-password list are rejected. This local list is not a comprehensive breached-password service. Login permits 1–128 code units for compatibility and does not apply signup strength rules. Passwords are salted by Argon2id (v19, memory 65536 KiB, time cost 3, parallelism 1, 32-byte hash).
+
+Exactly one confirmation field must be supplied and must match the parsed password string exactly. `ConfirmPassword` is a deprecated alias: successful use returns `meta:{deprecatedFields:["ConfirmPassword"]}`. Login likewise accepts exactly one of `identifier` or legacy `username`; the alias supports username or email and returns `meta:{deprecatedFields:["username"]}`. Supplying both aliases is rejected even when equal.
+
+### Errors and abuse limits
+
+Invalid bodies/confirmation/email/password return `400 VALIDATION_ERROR` with field paths and issue codes only. Any duplicate username or email returns `409 ACCOUNT_CONFLICT`, message `Unable to register with those account details`, without identifying which field conflicts. Registration still reveals that some account detail is unavailable; login does not reveal account existence.
+
+Absent users, wrong passwords, missing/deleted token subjects, malformed/expired/invalid tokens all return `401 UNAUTHORIZED`, message `Authentication failed`, `details:null`; HTTP 401 includes `WWW-Authenticate: Bearer`. Unknown users perform verification against a randomly initialized Argon2id dummy hash with the same work parameters. This reduces timing differences; it is not a constant-time guarantee across database/network conditions. A valid user with the wrong role receives `403 FORBIDDEN` / `Access denied`. Missing auth configuration returns `503 SERVICE_NOT_READY`; unexpected database exceptions remain sanitized 500 errors.
+
+The generic global limiter remains in effect. Register and login additionally share a default 10-attempt per-IP budget per 15 minutes (`AUTH_RATE_LIMIT_MAX`, configurable 1–20; `AUTH_RATE_LIMIT_WINDOW_MS`, 60000–3600000). It runs before JSON parsing, so malformed JSON counts. Validated attempts also share a default 5-attempt budget per normalized identifier (`AUTH_IDENTIFIER_RATE_LIMIT_MAX`, 1–10). The identifier is HMACed with an ephemeral random key before entering the memory store; registration uses username. Login username/email are separate identifier buckets; the IP budget applies across both. All outcomes, including successes, count. Exceeding a budget returns `429 RATE_LIMITED` and `Retry-After`.
+
+No client `X-Forwarded-For` is trusted. Limit state is local to a process, lost on restart and unsuitable for enforcing a distributed budget. At most four password operations run concurrently per process; excess work receives a nonleaky 503 without an unbounded queue. Account budgets can temporarily deny legitimate access after malicious attempts; choose an appropriate shared limiter/proxy policy before deployment.
+
+### Tokens and role freshness
+
+Tokens are signed with JOSE HS256 only, with protected header `typ:JWT`. The only accepted algorithm is HS256; `none`, other HMAC algorithms and algorithm substitution are rejected. `JWT_SECRET` is environment-only, 32 random bytes encoded as 64 hex characters; startup validation rejects wrong format and obvious low-diversity values. Entropy cannot be proven from format validation, so generate the key cryptographically. No fallback key is embedded in code or fixtures.
+
+Issuer and audience are validated against `JWT_ISSUER` (default `clu-store-api`) and `JWT_AUDIENCE` (default `clu-store-client`). Each token has UUID `sub`, UUID `jti`, `iat` and finite `exp`; default TTL is 900 seconds, configurable 60–3600. Verification requires issuer/audience/subject/issued-at/expiration, a valid UUID subject, integer times, positive lifetime no longer than configured TTL and no future issuance. Clock tolerance is zero; hosts need synchronized clocks. Tokens contain no role, email or password data.
+
+`requireAuth(service)` accepts only the Authorization Bearer header (maximum 4096 characters), verifies the token, then fetches a safe user projection by subject from PostgreSQL. A deleted user is denied. `requireRole('ADMIN')` checks the freshly fetched role; an embedded token role claim is ignored. Role freshness is one database read at the start of every protected request; it is not a guarantee against a role change midway through that request. Future admin mutations must consider their transaction boundary.
+
+This is a single-service demo access-token design: no refresh tokens, logout/revocation list, MFA, email verification, password recovery/change, key rotation overlap or multi-service key distribution. A stolen bearer token works until expiry unless its user is deleted or the signing key changes. Password changes made out of band do not revoke existing tokens. HS256 verification requires the signing secret, so any verifier can mint tokens. Use TLS before network exposure; the frontend should manage token storage and XSS risk deliberately. P06 must mount the reusable guard and derive ownership from `res.locals.user.id`.

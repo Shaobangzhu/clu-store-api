@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const devPassword = randomBytes(32).toString('hex');
 const testPassword = randomBytes(32).toString('hex');
 const values: Record<string, string> = {
+  JWT_SECRET: randomBytes(32).toString('hex'),
   POSTGRES_PASSWORD: randomBytes(32).toString('hex'),
   CLU_DEV_PASSWORD: devPassword,
   CLU_TEST_PASSWORD: testPassword,
