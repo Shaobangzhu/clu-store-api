@@ -6,7 +6,7 @@ if (existsSync('.env')) loadEnvFile('.env');
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
-  migrations: { path: 'prisma/migrations' },
+  migrations: { path: 'prisma/migrations', seed: 'node --env-file-if-exists=.env --import tsx prisma/seed.ts' },
   // Generation needs no database; migration commands fail if no URL is supplied.
   datasource: { url: process.env.DATABASE_URL ?? '' },
 });

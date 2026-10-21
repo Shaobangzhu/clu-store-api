@@ -1,6 +1,6 @@
 # Local development
 
-P02 uses the installed Docker engine with a dedicated PostgreSQL 18 Compose project. Application/business endpoints remain later work. Node 24 and npm 11 are required.
+P03 uses the installed Docker engine with a dedicated PostgreSQL 18 Compose project. Application/business endpoints remain later work. Node 24 and npm 11 are required.
 
 ## First setup
 
@@ -15,6 +15,7 @@ npm run db:generate
 npm run db:migrate:dev
 npm run db:migrate:test
 npm run db:smoke
+npm run db:seed
 npm run dev
 ```
 
@@ -62,3 +63,11 @@ npm start
 # With PostgreSQL running:
 npm run db:readiness:smoke -- 200
 ```
+
+## P03 demo seed
+
+`npm run db:seed` applies curated upserts only to local `clu_store_dev` using non-superuser `clu_dev`. It refuses production mode, test/remote database URLs, conflicting IDs and differing existing support content. It never creates users or prunes/reset data. `npx prisma db seed` is also configured, but the same guards apply. No schema migration was needed for P03.
+
+All six response JSON files are now reconciled. This is labeled sample/demo data; ten summary-only products have no active sellable configuration. See [fixture-provenance.md](fixture-provenance.md) before changing or publishing catalog data. `/media/demo-placeholder.svg` is a local asset for P04 to serve; no static/business route is added here.
+
+`npm run db:seed:verify -- before`, `-- after-first`, and `-- after-second` query actual database data and write exclusive snapshots under ignored `local-data/p03-seed-verification/`. The two post-seed snapshots must match in counts, IDs, values, relationships and sequence positions (automatic timestamps excluded). They also check unchanged user/cart/order counts. Existing verification files are preserved; archive them yourself before starting a new verification cycle. Set a distinct `SEED_VERIFY_RUN` such as `response-samples-v1` for a new run directory; earlier snapshots are preserved. Current results are in [p03-sample-reconciliation.md](p03-sample-reconciliation.md).

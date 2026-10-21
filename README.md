@@ -1,6 +1,6 @@
 # CLU Store API
 
-P02 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7 and local PostgreSQL 18. Catalog, auth, cart and order business endpoints arrive in later phases.
+P03 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Catalog, auth, cart and order business endpoints arrive in later phases.
 
 ## Local development
 
@@ -12,6 +12,7 @@ npm run env:local
 docker compose up -d --wait postgres
 npm run db:generate
 npm run db:migrate:dev
+npm run db:seed
 npm run dev
 ```
 
@@ -38,8 +39,10 @@ Reusable Zod validation accepts an object with `params`, `query` and/or `body` s
 
 ## Documentation and planning
 
-Current V1 decisions and compatibility constraints live in [docs/architecture.md](docs/architecture.md) and [docs/api-contract.md](docs/api-contract.md). See [docs/local-development.md](docs/local-development.md) for database roles, migrations, host/container URLs and guarded test workflows and [docs/fixture-provenance.md](docs/fixture-provenance.md) for missing source inputs.
+Current V1 decisions and compatibility constraints live in [docs/architecture.md](docs/architecture.md) and [docs/api-contract.md](docs/api-contract.md). See [docs/local-development.md](docs/local-development.md) for database roles, migrations, host/container URLs and guarded test workflows and [docs/fixture-provenance.md](docs/fixture-provenance.md) for source evidence, demo transformations and missing response samples.
 
 The original planning package remains under `documents/`: source audit, architecture/API proposal, implementation roadmap and phase prompts. It describes historical sources and future work; it is not evidence that those features are implemented. Original Postman material contains sensitive bearer-like values and must not be committed.
 
 Database verification uses `npm run db:migrate:test` and `npm run db:smoke` against a separately guarded test database. No reset is automated. The initial schema, including order snapshots and monetary Decimal fields, is in `prisma/schema.prisma`; P02 results are recorded in [docs/p02-verification.md](docs/p02-verification.md).
+
+P03 now reconciles all six supplied response samples: 7 complete sample products, 10 unavailable summary-only products and 8 supplemental frontend demo products. Source product IDs 2, 6, 7, 15, 22, 31 and 42 and their model/memory IDs are preserved. Earlier fallback records are reconciled using guarded ID corrections; inactive compatibility options are retained. All media uses an original local placeholder; support text is original and escaped. Historical offers remain inactive. See [sample reconciliation](docs/p03-sample-reconciliation.md) and [fixture provenance](docs/fixture-provenance.md).

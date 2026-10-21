@@ -22,7 +22,11 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:test": "node --env-file=.env --import tsx scripts/migrate-test.ts",
     "db:smoke": "node --env-file=.env --import tsx scripts/db-smoke.ts",
-    "db:readiness:smoke": "node --env-file=.env --import tsx scripts/readiness-smoke.ts"
+    "db:readiness:smoke": "node --env-file=.env --import tsx scripts/readiness-smoke.ts",
+    "db:seed": "node --env-file-if-exists=.env --import tsx prisma/seed.ts",
+    "db:seed:verify": "node --env-file=.env --import tsx scripts/seed-verify.ts",
+    "fixtures:curate": "node --import tsx scripts/curate-frontend.ts",
+    "fixtures:curate:samples": "node --import tsx scripts/curate-samples.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",

@@ -1,6 +1,6 @@
 # CLU Store API — data model
 
-P02 implements this relational foundation in `prisma/schema.prisma` and the reviewed initial migration. Preserve observed numeric catalog IDs when source mapping is unambiguous. No catalog seed data or fixture IDs are assigned in this phase.
+P02 implements this relational foundation in `prisma/schema.prisma` and the reviewed initial migration. Preserve observed numeric catalog IDs when source mapping is unambiguous. P03 now supplies a separate labeled frontend demo seed; mappings and missing response inputs are recorded in fixture-provenance.md.
 
 | Entity | Key fields and relations | Invariants |
 |---|---|---|
@@ -46,3 +46,7 @@ Within one PostgreSQL transaction: claim/check per-user idempotency key and requ
 - Deleting carts cascades to cart lines; deleting a user cascades its cart but is restricted by any order/history. Category and option dependencies use RESTRICT. Product deletion sets editorial card links null; order item product references and order/history records use RESTRICT. All reference updates explicitly cascade.
 
 The initial migration contains the SQL checks/functional indexes that Prisma cannot express directly. Do not discard them when regenerating schema changes. ADMIN checks, exactly-once status changes, immutable snapshots/totals, cart repricing, and atomic checkout/history writes remain later service responsibilities; SQL history-edge validation alone does not implement the order state machine.
+
+## P03 demo data
+
+The schema is unchanged. The reconciled seed preserves all seven complete response product IDs and their model/memory IDs. It corrects prior fallback IDs 1001 to 7 and 1002 to 8 only after checking the frozen prior data. Product 2 is normalized into demo Phones category 1. All 16 category summaries are present; the ten without complete sample options are unavailable, and no active configurations are fabricated for them. Supplemental frontend configurations remain labeled demo choices. Replaced configurations are retained inactive to preserve references. See [fixture-provenance.md](fixture-provenance.md).

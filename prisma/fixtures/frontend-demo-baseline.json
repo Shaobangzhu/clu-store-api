@@ -1,0 +1,1156 @@
+{
+  "version": 1,
+  "sourceKind": "local-frontend-demo",
+  "source": {
+    "repository": "Shaobangzhu/clu-store-client",
+    "commit": "c23689102ff2a9bcd18ad03b57107608f1d9ba25",
+    "files": [
+      {
+        "path": "src/assets/data/products.js",
+        "sha256": "98bdadcdcfab8a7c3a1d51494f156fd4fffd77cf51c121b1a91a0b0b36be8da7"
+      },
+      {
+        "path": "src/assets/data/index.js",
+        "sha256": "87a9179f67d80fd29e1f80e7d55e0eda9c98ab100db753909a5774d1e1214107"
+      }
+    ]
+  },
+  "categories": [
+    {
+      "id": 1,
+      "title": "手机",
+      "slug": "phones",
+      "subTitle": "本地前端演示分类",
+      "videos": [],
+      "editorialFeatures": []
+    },
+    {
+      "id": 2,
+      "title": "电脑",
+      "slug": "computers",
+      "subTitle": "本地前端演示分类",
+      "videos": [],
+      "editorialFeatures": []
+    },
+    {
+      "id": 3,
+      "title": "平板",
+      "slug": "tablets",
+      "subTitle": "本地前端演示分类",
+      "videos": [],
+      "editorialFeatures": []
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "sourceKey": "IPHONE_16_PRO",
+      "name": "iPhone 16 Pro",
+      "title": "演示配置 · iPhone 巅峰之作",
+      "categoryId": 1,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "7999.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "A18 Pro 芯片配备 6 核图形处理器",
+        "相机控制",
+        "Pro 级摄像头系统",
+        "我们最先进的 4800 万像素融合式摄像头",
+        "5 倍长焦摄像头",
+        "4800 万像素超广角摄像头",
+        "视频播放最长可达 33 小时"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1000101,
+          "name": "iPhone 16 Pro — iPhone 16 Pro（演示）",
+          "specification": "6.3 英寸显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "7999.00",
+          "inStock": true
+        },
+        {
+          "id": 1000102,
+          "name": "iPhone 16 Pro — iPhone 16 Pro Max（演示）",
+          "specification": "6.3 英寸显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "7999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2000101,
+          "name": "128GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2000102,
+          "name": "256GB",
+          "extraPrice": "2000.00",
+          "inStock": true
+        },
+        {
+          "id": 2000103,
+          "name": "512GB",
+          "extraPrice": "4000.00",
+          "inStock": true
+        },
+        {
+          "id": 2000104,
+          "name": "1TB",
+          "extraPrice": "6000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3000101,
+          "name": "沙漠色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000102,
+          "name": "原色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000103,
+          "name": "白色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000104,
+          "name": "黑色钛金属",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "sourceKey": "IPHONE_16",
+      "name": "iPhone 16",
+      "title": "演示配置 · 实打实的实力",
+      "categoryId": 1,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "5999.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "A18 芯片配备 5 核图形处理器",
+        "相机控制",
+        "先进的双摄系统",
+        "4800 万像素融合式摄像头",
+        "2 倍长焦功能",
+        "1200 万像素超广角摄像头",
+        "视频播放最长可达 27 小时"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1000201,
+          "name": "iPhone 16 — iPhone 16（演示）",
+          "specification": "6.1 英寸显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "5999.00",
+          "inStock": true
+        },
+        {
+          "id": 1000202,
+          "name": "iPhone 16 — iPhone 16 Plus（演示）",
+          "specification": "6.7 英寸显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "6999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2000201,
+          "name": "128GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2000202,
+          "name": "256GB",
+          "extraPrice": "2000.00",
+          "inStock": true
+        },
+        {
+          "id": 2000203,
+          "name": "512GB",
+          "extraPrice": "4000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3000201,
+          "name": "沙漠色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000202,
+          "name": "原色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000203,
+          "name": "白色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000204,
+          "name": "黑色钛金属",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "sourceKey": "IPHONE_15",
+      "name": "iPhone 15",
+      "title": "演示配置 · 浑身都出彩",
+      "categoryId": 1,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "5399.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "A16 芯片配备 5 核图形处理器",
+        "双摄系统",
+        "4800 万像素融合式摄像头",
+        "2 倍长焦功能",
+        "1200 万像素超广角摄像头",
+        "视频播放最长可达 26 小时"
+      ],
+      "inStock": false,
+      "models": [
+        {
+          "id": 1000301,
+          "name": "iPhone 15 — iPhone 15（演示）",
+          "specification": "6.1 英寸显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "5399.00",
+          "inStock": false
+        },
+        {
+          "id": 1000302,
+          "name": "iPhone 15 — iPhone 15 Plus（演示）",
+          "specification": "6.7 英寸显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "5999.00",
+          "inStock": false
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2000301,
+          "name": "128GB",
+          "extraPrice": "0.00",
+          "inStock": false
+        },
+        {
+          "id": 2000302,
+          "name": "256GB",
+          "extraPrice": "2000.00",
+          "inStock": false
+        },
+        {
+          "id": 2000303,
+          "name": "512GB",
+          "extraPrice": "4000.00",
+          "inStock": false
+        }
+      ],
+      "colors": [
+        {
+          "id": 3000301,
+          "name": "沙漠色钛金属",
+          "inStock": false
+        },
+        {
+          "id": 3000302,
+          "name": "原色钛金属",
+          "inStock": false
+        },
+        {
+          "id": 3000303,
+          "name": "白色钛金属",
+          "inStock": false
+        },
+        {
+          "id": 3000304,
+          "name": "黑色钛金属",
+          "inStock": false
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "sourceKey": "IPHONE_14",
+      "name": "iPhone 14",
+      "title": "演示配置 · 集齐各种赞",
+      "categoryId": 1,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "5399.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "A15 仿生芯片配备 5 核图形处理器",
+        "双摄系统",
+        "1200 万像素摄像头",
+        "1200 万像素超广角摄像头",
+        "视频播放最长可达 26 小时"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1000401,
+          "name": "iPhone 14 — iPhone 14（演示）",
+          "specification": "6.1 英寸显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "5399.00",
+          "inStock": true
+        },
+        {
+          "id": 1000402,
+          "name": "iPhone 14 — iPhone 14 Plus（演示）",
+          "specification": "6.7 英寸显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "5999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2000401,
+          "name": "128GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2000402,
+          "name": "256GB",
+          "extraPrice": "2000.00",
+          "inStock": true
+        },
+        {
+          "id": 2000403,
+          "name": "512GB",
+          "extraPrice": "4000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3000401,
+          "name": "沙漠色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000402,
+          "name": "原色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000403,
+          "name": "白色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000404,
+          "name": "黑色钛金属",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "sourceKey": "IPHONE_SE",
+      "name": "iPhone SE",
+      "title": "演示配置 · 够强够实惠",
+      "categoryId": 1,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "3499.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "A15 仿生芯片配备 4 核图形处理器",
+        "单摄系统",
+        "1200 万像素摄像头",
+        "视频播放最长可达 15 小时"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1000501,
+          "name": "iPhone SE — iPhone SE（演示）",
+          "specification": "5.7 英寸显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "3499.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2000501,
+          "name": "64GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2000502,
+          "name": "128GB",
+          "extraPrice": "500.00",
+          "inStock": true
+        },
+        {
+          "id": 2000503,
+          "name": "256GB",
+          "extraPrice": "1000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3000501,
+          "name": "沙漠色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000502,
+          "name": "原色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000503,
+          "name": "白色钛金属",
+          "inStock": true
+        },
+        {
+          "id": 3000504,
+          "name": "黑色钛金属",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "sourceKey": "MacBook_Air",
+      "name": "MacBook Air",
+      "title": "演示配置 · 轻薄便携，无所不能",
+      "categoryId": 2,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "7999.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "Retina 显示屏",
+        "最长 18 小时电池续航",
+        "Magic Keyboard",
+        "Touch ID",
+        "Thunderbolt 4 端口"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1000601,
+          "name": "MacBook Air — M1 Pro 机型（演示）",
+          "specification": "8核CPU/8核GPU（本地前端演示配置，未经厂商核实）",
+          "price": "7999.00",
+          "inStock": true
+        },
+        {
+          "id": 1000602,
+          "name": "MacBook Air — M1 Max 机型（演示）",
+          "specification": "10核CPU/32核GPU（本地前端演示配置，未经厂商核实）",
+          "price": "9999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2000601,
+          "name": "36GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2000602,
+          "name": "64GB",
+          "extraPrice": "2000.00",
+          "inStock": true
+        },
+        {
+          "id": 2000603,
+          "name": "128GB",
+          "extraPrice": "4000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3000601,
+          "name": "深空灰色",
+          "inStock": true
+        },
+        {
+          "id": 3000602,
+          "name": "银色",
+          "inStock": true
+        },
+        {
+          "id": 3000603,
+          "name": "金色",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 1001,
+      "sourceKey": "MacBook_Pro_16",
+      "name": "MacBook Pro 16",
+      "title": "演示配置 · 动力，来势汹汹",
+      "categoryId": 2,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "19999.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "Liquid Retina XDR 显示屏",
+        "最长22小时电池续航",
+        "六扬声器系统",
+        "3个雷雳4端口",
+        "MagSafe 3充电"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1100101,
+          "name": "MacBook Pro 16 — M3 Pro 机型（演示）",
+          "specification": "12核CPU/18核GPU（本地前端演示配置，未经厂商核实）",
+          "price": "19999.00",
+          "inStock": true
+        },
+        {
+          "id": 1100102,
+          "name": "MacBook Pro 16 — M3 Max 机型（演示）",
+          "specification": "16核CPU/40核GPU（本地前端演示配置，未经厂商核实）",
+          "price": "27999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2100101,
+          "name": "36GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2100102,
+          "name": "64GB",
+          "extraPrice": "3000.00",
+          "inStock": true
+        },
+        {
+          "id": 2100103,
+          "name": "128GB",
+          "extraPrice": "8000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3100101,
+          "name": "深空黑色",
+          "inStock": true
+        },
+        {
+          "id": 3100102,
+          "name": "银色",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 1002,
+      "sourceKey": "iMac",
+      "name": "iMac",
+      "title": "演示配置 · 色彩斑斓，无所不能",
+      "categoryId": 2,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "7999.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "Retina 4.5K 显示屏",
+        "最长 18 小时电池续航",
+        "Magic Keyboard",
+        "Touch ID",
+        "Thunderbolt 4 端口"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1100201,
+          "name": "iMac — M1 Pro 机型（演示）",
+          "specification": "8核CPU/8核GPU（本地前端演示配置，未经厂商核实）",
+          "price": "7999.00",
+          "inStock": true
+        },
+        {
+          "id": 1100202,
+          "name": "iMac — M1 Max 机型（演示）",
+          "specification": "10核CPU/32核GPU（本地前端演示配置，未经厂商核实）",
+          "price": "9999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2100201,
+          "name": "36GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2100202,
+          "name": "64GB",
+          "extraPrice": "2000.00",
+          "inStock": true
+        },
+        {
+          "id": 2100203,
+          "name": "128GB",
+          "extraPrice": "4000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3100201,
+          "name": "蓝色",
+          "inStock": true
+        },
+        {
+          "id": 3100202,
+          "name": "绿色",
+          "inStock": true
+        },
+        {
+          "id": 3100203,
+          "name": "粉色",
+          "inStock": true
+        },
+        {
+          "id": 3100204,
+          "name": "银色",
+          "inStock": true
+        },
+        {
+          "id": 3100205,
+          "name": "黄色",
+          "inStock": true
+        },
+        {
+          "id": 3100206,
+          "name": "橙色",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "sourceKey": "iPad_Pro",
+      "name": "iPad Pro M3",
+      "title": "演示配置 · 无所不能",
+      "categoryId": 3,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "6999.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "M1 Pro 芯片",
+        "最长 10 小时电池续航",
+        "Thunderbolt 4 端口",
+        "Face ID",
+        "USB-C 充电"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1000901,
+          "name": "iPad Pro M3 — M3 Pro 机型（演示）",
+          "specification": "12.9 英寸 Liquid Retina XDR 显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "7999.00",
+          "inStock": true
+        },
+        {
+          "id": 1000902,
+          "name": "iPad Pro M3 — M3 Max 机型（演示）",
+          "specification": "11 英寸 Liquid Retina XDR 显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "6999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2000901,
+          "name": "128GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2000902,
+          "name": "256GB",
+          "extraPrice": "2000.00",
+          "inStock": true
+        },
+        {
+          "id": 2000903,
+          "name": "512GB",
+          "extraPrice": "4000.00",
+          "inStock": true
+        },
+        {
+          "id": 2000904,
+          "name": "1TB",
+          "extraPrice": "6000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3000901,
+          "name": "深空黑色",
+          "inStock": true
+        },
+        {
+          "id": 3000902,
+          "name": "银色",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "sourceKey": "iPad_Air",
+      "name": "iPad Air M3",
+      "title": "演示配置 · 轻薄便携，无所不能",
+      "categoryId": 3,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "3999.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "M1 Pro 芯片",
+        "最长 10 小时电池续航",
+        "Thunderbolt 4 端口",
+        "Face ID",
+        "USB-C 充电"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1001001,
+          "name": "iPad Air M3 — M3 Pro 机型（演示）",
+          "specification": "12.9 英寸 Liquid Retina XDR 显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "4999.00",
+          "inStock": true
+        },
+        {
+          "id": 1001002,
+          "name": "iPad Air M3 — M3 Max 机型（演示）",
+          "specification": "11 英寸 Liquid Retina XDR 显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "3999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2001001,
+          "name": "128GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2001002,
+          "name": "256GB",
+          "extraPrice": "2000.00",
+          "inStock": true
+        },
+        {
+          "id": 2001003,
+          "name": "512GB",
+          "extraPrice": "4000.00",
+          "inStock": true
+        },
+        {
+          "id": 2001004,
+          "name": "1TB",
+          "extraPrice": "6000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3001001,
+          "name": "深空黑色",
+          "inStock": true
+        },
+        {
+          "id": 3001002,
+          "name": "银色",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "sourceKey": "iPad",
+      "name": "iPad M3",
+      "title": "演示配置 · 轻薄便携，无所不能",
+      "categoryId": 3,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "1999.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "M1 Pro 芯片",
+        "最长 10 小时电池续航",
+        "Thunderbolt 4 端口",
+        "Face ID",
+        "USB-C 充电"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1001101,
+          "name": "iPad M3 — M3 Pro 机型（演示）",
+          "specification": "12.9 英寸 Liquid Retina XDR 显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "2999.00",
+          "inStock": true
+        },
+        {
+          "id": 1001102,
+          "name": "iPad M3 — M3 Max 机型（演示）",
+          "specification": "11 英寸 Liquid Retina XDR 显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "1999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2001101,
+          "name": "128GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2001102,
+          "name": "256GB",
+          "extraPrice": "2000.00",
+          "inStock": true
+        },
+        {
+          "id": 2001103,
+          "name": "512GB",
+          "extraPrice": "4000.00",
+          "inStock": true
+        },
+        {
+          "id": 2001104,
+          "name": "1TB",
+          "extraPrice": "6000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3001101,
+          "name": "深空黑色",
+          "inStock": true
+        },
+        {
+          "id": 3001102,
+          "name": "银色",
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "sourceKey": "ipad_mini",
+      "name": "iPad Mini M3",
+      "title": "演示配置 · 轻薄便携，无所不能",
+      "categoryId": 3,
+      "imageSrc": "/media/demo-placeholder.svg",
+      "carouselImages": [
+        "/media/demo-placeholder.svg",
+        "/media/demo-placeholder.svg"
+      ],
+      "startingPrice": "2999.00",
+      "installments": null,
+      "features": [
+        "本地前端演示配置，非真实商品规格或销售承诺。",
+        "M1 Pro 芯片",
+        "最长 10 小时电池续航",
+        "Thunderbolt 4 端口",
+        "Face ID",
+        "USB-C 充电"
+      ],
+      "inStock": true,
+      "models": [
+        {
+          "id": 1001201,
+          "name": "iPad Mini M3 — M3 Pro 机型（演示）",
+          "specification": "12.9 英寸 Liquid Retina XDR 显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "3999.00",
+          "inStock": true
+        },
+        {
+          "id": 1001202,
+          "name": "iPad Mini M3 — M3 Max 机型（演示）",
+          "specification": "11 英寸 Liquid Retina XDR 显示屏（本地前端演示配置，未经厂商核实）",
+          "price": "2999.00",
+          "inStock": true
+        }
+      ],
+      "memorySizes": [
+        {
+          "id": 2001201,
+          "name": "128GB",
+          "extraPrice": "0.00",
+          "inStock": true
+        },
+        {
+          "id": 2001202,
+          "name": "256GB",
+          "extraPrice": "2000.00",
+          "inStock": true
+        },
+        {
+          "id": 2001203,
+          "name": "512GB",
+          "extraPrice": "4000.00",
+          "inStock": true
+        },
+        {
+          "id": 2001204,
+          "name": "1TB",
+          "extraPrice": "6000.00",
+          "inStock": true
+        }
+      ],
+      "colors": [
+        {
+          "id": 3001201,
+          "name": "深空黑色",
+          "inStock": true
+        },
+        {
+          "id": 3001202,
+          "name": "银色",
+          "inStock": true
+        }
+      ]
+    }
+  ],
+  "offers": [
+    {
+      "id": 11001,
+      "productId": null,
+      "type": "历史演示 · 迎新春限时优惠",
+      "title": "叱咤福利开好头",
+      "detail": "1 月 4 日至 7 日，以符合条件的支付方式买指定产品，最高立省 RMB 800※。轻松换购新 iPhone 享折抵优惠¹。",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "active": false,
+      "startsAt": null,
+      "endsAt": null,
+      "soldOut": false
+    },
+    {
+      "id": 11002,
+      "productId": null,
+      "type": "历史演示 · 迎新春限时优惠",
+      "title": "iPhone",
+      "detail": "活动期间，以符合条件的支付方式买指定款 iPhone，最高立省 RMB 500※。换购还享折抵优‍惠¹",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "active": false,
+      "startsAt": null,
+      "endsAt": null,
+      "soldOut": false
+    },
+    {
+      "id": 11003,
+      "productId": null,
+      "type": "历史演示 · 迎新春限时优惠",
+      "title": "iPad",
+      "detail": "活动期间，以符合条件的支付方式买指定款 iPad，最高立省 RMB 400※。",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "active": false,
+      "startsAt": null,
+      "endsAt": null,
+      "soldOut": true
+    },
+    {
+      "id": 11004,
+      "productId": null,
+      "type": "历史演示 · 迎新春限时优惠",
+      "title": "Apple Watch",
+      "detail": "活动期间，以符合条件的支付方式买指定款 Apple Watch，最高立省 RMB 300※。",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "active": false,
+      "startsAt": null,
+      "endsAt": null,
+      "soldOut": false
+    },
+    {
+      "id": 11005,
+      "productId": null,
+      "type": "历史演示 · 迎新春限时优惠",
+      "title": "AirPods",
+      "detail": "活动期间，以符合条件的支付方式买指定款 AirPods，最高立省 RMB 300※。",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "active": false,
+      "startsAt": null,
+      "endsAt": null,
+      "soldOut": false
+    },
+    {
+      "id": 11006,
+      "productId": null,
+      "type": "历史演示 · 迎新春限时优惠",
+      "title": "AirPods 2",
+      "detail": "活动期间，以符合条件的支付方式买指定款 AirPods，最高立省 RMB 300※。",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "active": false,
+      "startsAt": null,
+      "endsAt": null,
+      "soldOut": false
+    }
+  ],
+  "newArrivals": [
+    {
+      "id": 12001,
+      "productId": 1001,
+      "displayOrder": 0,
+      "title": "Macbook Pro 16 英寸",
+      "detail": "超强性能，超长续航 RMB 19999 起 +++",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "textColor": "white",
+      "soldOut": false
+    },
+    {
+      "id": 12002,
+      "productId": null,
+      "displayOrder": 1,
+      "title": "Apple Music 免费试听三‍个‍月。",
+      "detail": "购买指定 Apple 设备可享此福利脚注⁺。",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "textColor": "black",
+      "soldOut": false
+    },
+    {
+      "id": 12003,
+      "productId": null,
+      "displayOrder": 2,
+      "title": "Apple Watch Ultra 2",
+      "detail": "野出新一面 RMB 6499 起",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "textColor": "white",
+      "soldOut": false
+    },
+    {
+      "id": 12004,
+      "productId": null,
+      "displayOrder": 3,
+      "title": "Mac mini",
+      "detail": "尺寸暴减，实力却暴涨。 RMB 4499 起",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "textColor": "black",
+      "soldOut": true
+    },
+    {
+      "id": 12005,
+      "productId": null,
+      "displayOrder": 4,
+      "title": "MacBook Pro",
+      "detail": "强势动力来自 M4 RMB 12,999 起",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "textColor": "white",
+      "soldOut": false
+    },
+    {
+      "id": 12006,
+      "productId": null,
+      "displayOrder": 5,
+      "title": "Apple Vision Pro",
+      "detail": "欢迎来到空间计算时代。 RMB 1250/月 (0% 费率 24 个月分期) 起或 RMB 29,999 起",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "textColor": "black",
+      "soldOut": false
+    },
+    {
+      "id": 12007,
+      "productId": null,
+      "displayOrder": 6,
+      "title": "新款必备",
+      "detail": "RMB 333/月 (0% 费率 24 个月分期) 起或 RMB 7999 起",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "textColor": "black",
+      "soldOut": false
+    },
+    {
+      "id": 12008,
+      "productId": null,
+      "displayOrder": 7,
+      "title": "赏新年大片，顺便学几招。",
+      "detail": "用 iPhone 拍摄*",
+      "imageSrc": "/media/demo-placeholder.svg",
+      "textColor": "black",
+      "soldOut": false
+    }
+  ]
+}

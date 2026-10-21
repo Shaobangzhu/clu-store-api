@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title desc">
+  <title id="title">Demo media placeholder</title>
+  <desc id="desc">An original neutral illustration representing unavailable demo media.</desc>
+  <rect width="800" height="600" rx="24" fill="#eef0f3"/>
+  <rect x="210" y="140" width="380" height="250" rx="16" fill="#d3d9e1" stroke="#64748b" stroke-width="8"/>
+  <path d="M180 420h440" stroke="#64748b" stroke-width="12" stroke-linecap="round"/>
+  <text x="400" y="500" text-anchor="middle" fill="#475569" font-family="sans-serif" font-size="30">DEMO · PLACEHOLDER</text>
+</svg>
