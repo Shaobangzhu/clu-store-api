@@ -1,7 +1,7 @@
 import { Prisma, type PrismaClient, type Cart, type CartItem, type Product, type ProductModel,
   type ProductMemorySize, type ProductColor } from '../../generated/prisma/client.js';
 import { AppError } from '../../lib/errors.js';
-import { unauthorized } from '../auth/token.js';
+import { lockCartOwner } from './locking.js';
 import type { AddItem } from './schemas.js';
 
 export type CartItemRecord = CartItem & { product: Product; model: ProductModel; memorySize: ProductMemorySize; productColor: ProductColor };
@@ -69,8 +69,7 @@ export function createCartRepository(database: PrismaClient | undefined) {
     mutate: <T>(userId: string, operation: (cart: CartWriter) => Promise<T>) => client().$transaction(async (tx) => {
       // Lock the owner even before a cart exists. All cart writes (including deletes)
       // must use this lock; P07 checkout must use the same ordering/protocol.
-      const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`;
-      if (!users.length) throw unauthorized();
+      await lockCartOwner(tx, userId);
       return operation(writer(tx, userId));
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, maxWait: 5000, timeout: 10000 }),
   };

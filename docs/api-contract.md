@@ -1,6 +1,6 @@
 # CLU Store API — V1 contract
 
-**Status:** P06 implements persistent owned carts and the public synthetic cart demo, alongside P05 auth, P04 public reads and `/health`/`/ready`. Checkout, order and documentation UI routes remain future V1 work.
+**Status:** P07 implements atomic checkout alongside P06 carts, P05 auth, P04 public reads and `/health`/`/ready`. Order retrieval/ADMIN transitions and documentation UI routes remain future V1 work.
 
 ## Response and money rules
 
@@ -33,7 +33,7 @@ The original paths remain callable in V1, but the new envelope and validation ru
 | 11 | `POST /api/ShoppingCart/items` | JWT | `{productId,modelId,memorySizeId,color,qty}`; resolve valid SKU; merge by full configuration. |
 | 12 | `DELETE /api/ShoppingCart/items/:id` | JWT | Delete an owned cart line; `204`. |
 | 13 | `DELETE /api/ShoppingCart/items` | JWT | Clear own cart; idempotent; `204`. |
-| 14 | `POST /api/orders/place` | JWT | Checkout own cart; require `Idempotency-Key`; server recalculates price and transactionally snapshots order/items/history and clears cart. `201` new, `200` replay. |
+| 14 | `POST /api/orders/place` | JWT | JSON `{}` checks out own cart; optional `Idempotency-Key`; transactionally reprice/snapshot order/items/history and consume purchased lines. Direct SKU mode preserves cart. `201` new, `200` replay. |
 | 15 | `GET /api/orders/:id` | JWT owner or ADMIN | Order snapshots and status history. |
 | 16 | `POST /api/orders/:id/approve` | ADMIN JWT | `pending -> approved` only; atomic history write. |
 | 17 | `POST /api/orders/:id/reject` | ADMIN JWT | `pending -> rejected` only; atomic history write. |
@@ -54,7 +54,7 @@ The original paths remain callable in V1, but the new envelope and validation ru
 | `approve` marked `noauth` in old collection | Rejected. Both transitions require authenticated ADMIN. |
 | Arbitrary legacy transition metadata | Only accept validated structured metadata if retained; it cannot alter authorization or state rules. Exact schema remains unspecified. |
 | GET order request body in old collection | No body contract. Clients must not depend on it; ignore or reject according to HTTP parsing policy. |
-| Legacy direct single-item checkout body | Cart checkout is canonical. Whether to retain a compatibility adapter is undecided; if supported later, validate SKU and ignore client pricing. |
+| Legacy direct single-item checkout body | Supported in P07 with canonical SKU identifiers/quantity. Validate live configuration, discard accepted legacy display/prices and leave the cart unchanged. Unknown fields are rejected. |
 | Legacy image URLs / old support HTML | Do not copy blindly; replace only with reviewed/local assets and sanitized content. |
 
 Errors use stable codes such as `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `PRODUCT_NOT_FOUND`, `INVALID_PRODUCT_CONFIGURATION`, `EMPTY_CART`, `ORDER_INVALID_TRANSITION`, `IDEMPOTENCY_CONFLICT`, and `SERVICE_NOT_READY`. Use `400` malformed request, `401` unauthenticated, `403` wrong role, `404` missing/inaccessible resource, `409` uniqueness/transition/idempotency conflict, `422` invalid business selection, `429` rate limited, and sanitized `500`/`503` as appropriate.
@@ -90,7 +90,7 @@ List and detail data preserve these public keys:
 - `memorySizes`: `{id,name,price,inStock}`, with price as the **incremental upgrade** string; internal `extraPrice` is not exposed.
 - `colors`: names only, not internal color rows/IDs.
 
-Only active model/memory/color records are exposed. Retired compatibility options remain stored but cannot appear as purchasable options. Summary-only unavailable products may have empty configuration arrays. Product `inStock` is its stored availability flag and is independent of marketing `soldOut`. Unit pricing in later checkout is model base plus memory increment; `startingPrice` is never added again. Catalog reads do not calculate a checkout or accept a price from the client.
+Only active model/memory/color records are exposed. Retired compatibility options remain stored but cannot appear as purchasable options. Summary-only unavailable products may have empty configuration arrays. Product `inStock` is its stored availability flag and is independent of marketing `soldOut`. Checkout unit pricing is model base plus memory increment; `startingPrice` is never added again. Catalog reads do not calculate a checkout or accept a price from the client.
 
 `GET /api/products/:id` accepts only a positive integer within PostgreSQL Int32 range. Static `/offers` and `/newarrivals` are registered before `/:id`. Invalid IDs/encoding produce 400; valid missing IDs produce 404.
 
@@ -197,16 +197,79 @@ Each structured line is:
 
 All prices and amounts are fixed two-decimal JSON strings. Nested model `price` is the full base; nested memory `price` is the increment. Names/specifications/media come from the database, and images pass the existing local-media serializer validation. Cart owner IDs, password hashes and raw Prisma rows are not exposed.
 
-Each successful add stores the calculated unit price; a merge replaces the cached unit price for the entire resulting line. GET displays **current** catalog prices from a Repeatable Read snapshot, recalculates totals, and does not rewrite the stored cache. An existing line that later becomes unavailable remains visible with `available:false`, its current price and quantity, and can be removed/cleared; adding more is rejected. Totals include such lines as a display estimate, not a purchase guarantee. P07 must revalidate prices, availability and the order monetary column limits within checkout; neither cache nor a prior GET is authoritative.
+Each successful add stores the calculated unit price; a merge replaces the cached unit price for the entire resulting line. GET displays **current** catalog prices from a Repeatable Read snapshot, recalculates totals, and does not rewrite the stored cache. An existing line that later becomes unavailable remains visible with `available:false`, its current price and quantity, and can be removed/cleared; adding more is rejected. Totals include such lines as a display estimate, not a purchase guarantee. P07 revalidates prices, availability and the order monetary column limits within checkout; neither cache nor a prior GET is authoritative.
 
 ### Concurrency and ownership
 
 Every add, remove and clear transaction first locks the authenticated User row with `FOR UPDATE`, even before a cart exists. Read Committed then reads the cart after acquiring that lock. This serializes cooperating writes for one owner, prevents lost increments and makes line/quantity caps atomic. The existing unique cart-per-user and full `(cartId,productId,modelId,memorySizeId,color)` indexes remain final database protections; upserts preserve line identity on merge. The current SKU query checks all relationships in one parameterized statement and takes share locks on the selected product/model/memory/color rows until commit, keeping price and availability stable for that add.
 
-Deletes filter through the cart's authenticated owner. Foreign and missing line IDs return `404 CART_ITEM_NOT_FOUND` with the same message. Clear deletes only that owner's lines and does not delete the cart. Mutations have a 5-second transaction acquisition limit and 10-second transaction deadline, also subject to the existing shorter database query timeout. Arbitrary out-of-band writers are not covered by the application cap protocol. P07 checkout must acquire the same owner lock before reading/mutating the cart; inventory reservation and checkout are not implemented here.
+Deletes filter through the cart's authenticated owner. Foreign and missing line IDs return `404 CART_ITEM_NOT_FOUND` with the same message. Clear deletes only that owner's lines and does not delete the cart. Mutations have a 5-second transaction acquisition limit and 10-second transaction deadline, also subject to the existing shorter database query timeout. Arbitrary out-of-band writers are not covered by the application cap protocol. P07 checkout acquires the same owner lock before reading/mutating the cart; inventory reservation remains outside V1.
 
 ### Synthetic demo and frontend boundary
 
 The public demo uses no database, account, token, request body or clock. It always returns `isDemo:true`, one original sample line of quantity 2, full base `"100.00"`, memory increment `"20.00"`, unit price `"120.00"` and total `"240.00"`. Cart, line, product and option IDs are null; `available:false` makes its non-purchasable purpose explicit. Names/specification are original demo text and the image is the reviewed local placeholder. These values are not catalog fixtures and are never persisted. Supplying a valid/invalid bearer header does not personalize the public result.
 
 The inspected local frontend uses a reducer persisted to localStorage. P06 provides backend routes only. P12 must implement the envelope/DTO adapter and authenticated cart workflow explicitly; there is no automatic synchronization or mock bridge.
+
+## P07 checkout
+
+### Request and compatibility
+
+`POST /api/orders/place` requires a valid bearer token and explicit JSON body. Canonical `{}` purchases all lines of the authenticated user's current persisted cart. There are no query parameters. Missing/unparsed bodies, arrays, null, partial SKUs and unknown properties are rejected; client owner, total, shipping, tax, payment, status and metadata fields are never trusted or accepted.
+
+The optional direct-item compatibility body is `{productId,modelId,memorySizeId,color,qty}` with the P06 identifier/color validation and quantity limits. All configuration components must belong to the selected product and be available. Direct mode **leaves the cart unchanged**, even when an identical line exists there. The legacy `name`, `imageSrc`, `model`, `modelPrice`, `memorySize`, `memorySizePrice` fields have the P06 bounds and are discarded before fingerprinting or pricing. They are deprecated; send only canonical SKU fields. This is a documented V1 adapter, not a claim that every historical request shape is supported.
+
+Limits are 99 units per line, 50 distinct lines and 500 units per checkout; direct mode contains one line. Invalid business quantities use 422. Unit price, each line total and the order subtotal must each fit `numeric(12,2)`, at most `9999999999.99`. All are calculated with Prisma Decimal from **live full model price plus memory increment**, ignoring `startingPrice` and cached cart prices. Only CNY item subtotal is supported. Marketing `soldOut` is independent of the four product/model/memory/color availability flags.
+
+### Idempotency
+
+`Idempotency-Key` is optional per the P07 requirement, amending the earlier planned mandatory header. Its format is 1–128 ASCII characters matching `^[A-Za-z0-9][A-Za-z0-9._:-]*$`. Values are case-sensitive; HTTP header names are case-insensitive. Empty, invalid, comma-joined and repeated wire headers (including identical duplicates) return `400 VALIDATION_ERROR`. Clients should generate an unpredictable key for each new purchase intent and persist it across retries.
+
+The database unique `(userId,idempotencyKey)` index scopes reuse to one user. A SHA-256 fingerprint covers a versioned canonical array: route, version 1 and mode; direct mode additionally includes product/model/memory IDs, exact color and quantity in fixed order. Ignored legacy properties and JSON property ordering do not affect it. Cart contents are deliberately excluded: the key identifies the cart checkout intent, and replay must work after consumption or later cart edits. Reusing a cart key never purchases newly added lines; use a new key for a new purchase.
+
+Inside the owner-locked transaction, replay is checked **before empty-cart, stock or price checks**. A matching key returns the exact stored creation response body with 200, including original item order, names, prices, timestamp and `pending` status. It does not consume the current cart. Request-specific HTTP headers such as `X-Request-Id` can change. A different direct SKU/quantity or incompatible mode returns `409 IDEMPOTENCY_CONFLICT`. A failed/rolled-back attempt does not claim a key. Keys currently have no expiry; retain the order and saved receipt together.
+
+First creation returns 201. Without a key, every valid direct request may create a separate order; a consumed cart is empty on the next request. The server does not promise replay or safe recovery from an unknown commit outcome without a key. Retry uncertain network outcomes with the original key and body.
+
+### Creation receipt
+
+Success is `{success:true,data,meta:null}` with `Cache-Control: no-store`. The same explicit DTO is saved in server-owned `Order.metadata` in the checkout transaction for exact replay:
+
+```json
+{
+  "id": 123,
+  "status": "pending",
+  "currency": "CNY",
+  "totalAmount": "20.20",
+  "createdAt": "2026-10-21T12:00:00.000Z",
+  "items": [{
+    "id": 456, "productId": 2, "productName": "Example product",
+    "modelName": "Example model", "modelSpecification": "Example specification",
+    "memoryName": "Example memory", "color": "Black", "qty": 2,
+    "unitPrice": "10.10", "lineTotal": "20.20"
+  }]
+}
+```
+
+This is an illustrative DTO, not source fixture data. IDs are positive database integers; money uses fixed two-decimal strings. Cart items are snapshotted in ascending cart-line ID order. Product/model/specification/memory/color descriptions are independent of future catalog edits. The current schema stores configuration descriptions, not model/memory foreign keys or images on OrderItem. User IDs, raw metadata, fingerprints, keys and credentials are not returned. P08 current-status reads must be separate from this immutable placement receipt; transitions must preserve its metadata.
+
+### Atomicity and errors
+
+One real PostgreSQL Read Committed transaction locks the authenticated User row first, then checks replay, reads/locks owned cart lines, and joins/share-locks live SKU rows. It inserts a pending order, immutable item snapshots, the initial null-to-pending history entry with the purchaser as operator, and the saved receipt. Cart mode then deletes exactly the purchased owned line IDs. All writes commit or roll back together; direct mode performs no cart deletion. The reusable Cart row remains.
+
+The lock protocol is shared with all P06 mutations. The per-user unique key index is the final duplicate protection. Only Prisma `P2034` (the pinned pg adapter's mapping of PostgreSQL `40001` / `40P01`) retries the **whole** transaction, at most three attempts with 20/40 ms delays. Exhaustion is `503 CHECKOUT_BUSY`. Validation, unique/check violations, timeouts and ambiguous commit/connection failures are not automatically retried. Transaction acquisition/deadline limits are 5/10 seconds, also bounded by configured database statement/query timeouts. Read Committed with these locks is not a claim of database-wide Serializable isolation.
+
+| Status/code | Meaning |
+|---|---|
+| 400 `VALIDATION_ERROR` / `MALFORMED_JSON` | Invalid header, query or body / malformed JSON |
+| 401 `UNAUTHORIZED` | Missing/invalid token or deleted authenticated user |
+| 409 `IDEMPOTENCY_CONFLICT` | Key already used for another mode or direct SKU request |
+| 422 `EMPTY_CART` | No owned persisted cart lines |
+| 422 `INVALID_CART` | Checkout line/quantity caps violated |
+| 422 `INVALID_PRODUCT_CONFIGURATION` | Product or option ownership/configuration cannot be resolved |
+| 422 `PRODUCT_UNAVAILABLE` | At least one live availability flag is false |
+| 422 `ORDER_AMOUNT_EXCEEDED` | Unit/line/subtotal exceeds the monetary column limit |
+| 503 `CHECKOUT_BUSY` / `SERVICE_NOT_READY` | Recognized transaction conflicts exhausted / required dependency missing |
+| 500 `INTERNAL_ERROR` | Other database/internal failure; no SQL or exception detail exposed |
+
+Validation or transaction failures preserve the cart and do not leave partial orders/history. V1 checks boolean availability only; it has no stock counts, reservations, payment side effects or shipping workflow. See [transaction design](architecture.md#p07-checkout-boundary) and [real PostgreSQL verification](p07-verification.md).

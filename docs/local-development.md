@@ -1,6 +1,6 @@
 # Local development
 
-P03 uses the installed Docker engine with a dedicated PostgreSQL 18 Compose project. Application/business endpoints remain later work. Node 24 and npm 11 are required.
+Local development uses the installed Docker engine with a dedicated PostgreSQL 18 Compose project. P04–P07 provide public reads, auth, carts and transactional checkout. Node 24 and npm 11 are required.
 
 ## First setup
 
@@ -124,3 +124,21 @@ npm run build
 The cart suite validates the guarded test database/role, creates users and catalog options with generated identities, then exercises actual committed transactions and concurrent requests. Per-test cleanup deletes only those exact users/products and their dependent test records. Final counts for User, Cart, CartItem, Product, ProductModel, ProductMemorySize and ProductColor must match the initial counts. No reset/truncate is used and development data is untouched. A killed test process may leave its own generated fixtures; inspect them explicitly rather than resetting shared data.
 
 The full integration suite also covers auth/catalog behavior after shared app wiring changes. See [P06 verification](p06-verification.md). The sibling frontend was inspected read-only: its cart uses a reducer and localStorage. Frontend API integration remains P12 work.
+
+## P07 checkout verification
+
+P07 reuses the existing Prisma schema, initial migration, JWT settings and local PostgreSQL service. There are no dependency installations, schema changes or development seeds. Ensure the existing database is healthy and use the guarded test target:
+
+```sh
+npm run db:migrate:test
+npm run test:integration -- tests/integration/orders-place.test.ts
+npm run test:integration
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Checkout tests use real committed PostgreSQL transactions and Promise.all HTTP requests. They generate test identities/options, observe lock waits through `pg_stat_activity`, test simultaneous keys/cart writes/catalog updates and assert exact snapshot totals/replays. Fault tests create narrowly scoped, randomly named test-only triggers/functions/sequences that fail history insertion or cart deletion **after partial order writes exist**. SQLSTATE 23514 checks rollback without retry; 40001/40P01 exercise the actual Prisma adapter/retry path. These faults are injected database exceptions, not claims that PostgreSQL naturally selected a deadlock victim in that case. No production fault hook or database mock is used.
+
+The test URL and connected role/database guards run before DDL or data mutation. Fault objects are removed in finally; test cleanup deletes only exact allocated order/history/item/user/catalog IDs. Counts of ten affected tables must match their pre-suite values afterward. No reset, truncate, development mutation or unrelated container/volume deletion is performed. A force-killed run may leave its own `p07_fault_*` objects or test fixtures; inspect exact ownership before manual removal, never reset shared data. Sequence counters may advance after rollback. See [P07 verification](p07-verification.md) for actual commands/results and the [checkout contract](api-contract.md#p07-checkout) for client retries.

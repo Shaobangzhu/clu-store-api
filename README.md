@@ -1,6 +1,6 @@
 # CLU Store API
 
-P06 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads are implemented. Registration, login, JWT authentication and role guards are implemented. Persistent user-owned carts are implemented; checkout and orders arrive in later phases.
+P07 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads, registration/login, JWT guards, persistent user-owned carts and atomic checkout are implemented. Order retrieval and ADMIN decisions arrive in P08.
 
 ## Local development
 
@@ -59,7 +59,7 @@ P03 now reconciles all six supplied response samples: 7 complete sample products
 
 All JSON responses use the documented envelope. Monetary DTO values are two-decimal strings; memory option price is an increment over the full model base price. Support is sanitized on read. Historical offers remain inactive, and unavailable summary-only products have no active configurations. The reviewed placeholder is served at `/media/demo-placeholder.svg`.
 
-`npm test` runs database-independent regressions. `npm run test:integration` requires the guarded local test database and uses real PostgreSQL with rollback-only catalog fixtures and narrowly cleaned-up authentication/cart fixtures; it fails rather than silently skipping when configuration/access is unavailable. See [P04 verification](docs/p04-verification.md) and [the read contract](docs/api-contract.md#p04-public-read-details).
+`npm test` runs database-independent regressions. `npm run test:integration` requires the guarded local test database and uses real PostgreSQL with rollback-only catalog fixtures and narrowly cleaned-up authentication/cart/order fixtures; it fails rather than silently skipping when configuration/access is unavailable. See [P04 verification](docs/p04-verification.md) and [the read contract](docs/api-contract.md#p04-public-read-details).
 
 
 ## Authentication (P05)
@@ -68,7 +68,7 @@ All JSON responses use the documented envelope. Monetary DTO values are two-deci
 
 Configure `JWT_SECRET` as 32 cryptographically random bytes encoded as 64 hex characters, plus `JWT_ISSUER`, `JWT_AUDIENCE` and `JWT_TTL_SECONDS` (default 900). `env:local` supplies a random key for **new** `.env` files; existing files are preserved and need the new key added explicitly. Missing secret disables authentication with 503 in development/test and rejects production startup. Invalid supplied secrets always reject startup.
 
-Argon2id hashes use 64 MiB, three passes and one lane. Auth limits apply per IP before JSON parsing and per normalized identifier; passwords, hashes, bodies and headers are excluded/redacted in logs. Reusable `requireAuth` loads the current database user/role on every protected request, and `requireRole('ADMIN')` checks that role. Cart routes use these guards; order routes arrive later.
+Argon2id hashes use 64 MiB, three passes and one lane. Auth limits apply per IP before JSON parsing and per normalized identifier; passwords, hashes, bodies and headers are excluded/redacted in logs. Reusable `requireAuth` loads the current database user/role on every protected request, and `requireRole('ADMIN')` checks that role. Private cart routes and checkout use authentication; ADMIN order decisions arrive in P08.
 
 Provision an administrator explicitly with `npm run admin:create`, operator-provided JSON credentials on stdin and `ADMIN_DATABASE_NAME` matching the chosen database. This CLI only creates accounts and never overwrites or promotes an existing user. See [auth contract](docs/api-contract.md#p05-authentication), [local setup and CLI](docs/local-development.md#p05-authentication-setup), and [verification/security limits](docs/p05-verification.md).
 
@@ -82,3 +82,11 @@ Add `{productId,modelId,memorySizeId,color,qty}` using a bearer token. The serve
 Owner row locks serialize mutations and cap checks; GET uses a consistent database snapshot and displays current catalog prices. Stored unit prices are add-time caches, not checkout authority. See [cart contract](docs/api-contract.md#p06-carts) and [P06 verification](docs/p06-verification.md).
 
 The local frontend still uses its reducer/localStorage cart. Its API integration remains P12 work; no mock bridge or frontend changes were made.
+
+## Atomic checkout (P07)
+
+`POST /api/orders/place` with a bearer token and JSON `{}` purchases the current user's persisted cart. Send a new `Idempotency-Key` for each purchase intent (optional, 1–128 ASCII characters matching `[A-Za-z0-9][A-Za-z0-9._:-]*`). A first creation returns 201; an identical keyed retry returns the saved creation receipt with 200, even after cart consumption. Conflicting key reuse returns 409. Direct `{productId,modelId,memorySizeId,color,qty}` checkout is also supported and leaves the cart unchanged.
+
+One PostgreSQL Read Committed transaction locks the owner and selected rows, checks a replay before the cart, validates live options/stock, calculates Decimal model-plus-memory prices, saves pending order/item/history snapshots and consumes purchased cart lines. The existing per-user key constraint prevents duplicates; recognized serialization/deadlock conflicts retry the entire transaction at most three times. This is explicit row locking, not database-wide Serializable isolation. No inventory reservation or payment processing is implied.
+
+See [checkout contract](docs/api-contract.md#p07-checkout), [transaction design](docs/architecture.md#p07-checkout-boundary) and [actual PostgreSQL verification](docs/p07-verification.md). No schema or dependency changes are required. P08 must preserve snapshots and saved replay metadata while adding owned order reads and ADMIN transitions.

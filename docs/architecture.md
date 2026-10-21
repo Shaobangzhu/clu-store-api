@@ -1,6 +1,6 @@
 # CLU Store API — V1 architecture
 
-**Status:** P06 persistent user-owned carts, P05 auth and P04 public reads are implemented alongside the HTTP/database foundation and demo seed. Checkout/order services remain planned; this document describes the V1 target.
+**Status:** P07 atomic checkout, P06 persistent user-owned carts, P05 auth and P04 public reads are implemented alongside the HTTP/database foundation and demo seed. Order retrieval/ADMIN transitions remain P08 work; this document also describes the V1 target.
 
 ## Decisions
 
@@ -14,7 +14,7 @@
 | Product price | Model `price` is the full base price; memory `price` is the incremental upgrade. Unit price = model base + memory upgrade. `startingPrice` is informational and is never added again. |
 | New arrivals | A card may be editorial and have a nullable product link. |
 | Order decisions | Only ADMIN may approve/reject; only `pending` transitions to a terminal state. |
-| Checkout | Real PostgreSQL transaction; persist order, snapshots and initial history, and clear only the purchaser's cart atomically. |
+| Checkout | Read Committed PostgreSQL transaction with owner/catalog row locks; persist order, snapshots, initial history and replay receipt, and consume purchased cart lines atomically. Direct SKU mode preserves cart. |
 
 Node 24 is a major-line target; select and pin a current patch at implementation time. Do not infer unprovided catalog facts or create sample fixture content.
 
@@ -45,7 +45,7 @@ stateDiagram-v2
   rejected --> [*]
 ```
 
-Each status change and its history row commit atomically. Conditional transition from `pending` prevents two concurrent admin decisions from both succeeding. Other transitions return `409 ORDER_INVALID_TRANSITION`.
+P07 creates the pending order and initial history atomically. P08 must make each ADMIN decision and its history row atomic: a conditional transition from `pending` prevents two concurrent decisions from both succeeding; other transitions return `409 ORDER_INVALID_TRANSITION`. Placement replay always returns its saved creation receipt; fresh status belongs to P08 order reads.
 
 ## Security risk register
 
@@ -58,7 +58,10 @@ Each status change and its history row commit atomically. Conditional transition
 | Credential stuffing / abuse | Strict per-IP (and privacy-safe account) login/register limits, bounded JSON bodies, allowlisted CORS, Helmet, validated input. |
 | Unsafe legacy support HTML | Only reviewed sanitized HTML / safe protocol and attribute allowlist; client sanitizes as defense in depth. Treat source HTML as untrusted. |
 | Secret-bearing Postman material | Original collection is sensitive. Never copy its bearer values or headers; any later rebuilt collection must be sanitized. |
-| Idempotency race / partial checkout | Unique per-user idempotency key, request fingerprint and PostgreSQL transaction; integration tests cover replay, conflict, concurrency and rollback. |
+| Idempotency race / partial checkout | P07 shared owner lock, unique per-user key, persisted fingerprint/creation receipt and one PostgreSQL transaction; real tests cover overlapping requests and database rollback faults. |
+| Unknown commit outcome / omitted key | Keyed client retries recover the saved receipt; optional unkeyed direct checkout has no duplicate/replay guarantee. Unknown connection/commit errors are not blindly retried. |
+| Catalog mutation / stale cart price | Share-lock all selected SKU rows, validate current ownership/stock and use Decimal live model-plus-memory pricing. Snapshot descriptions/amounts persist independently of later edits. |
+| Out-of-band writes / metadata edits | Future writers must honor owner lock order and preserve snapshots/replay metadata. Database constraints alone do not enforce immutable history or application quantity caps. |
 | Database exposure | Compose-only service network; avoid public host binding; separate development/test databases; inject secrets at runtime. |
 | Historical marketing misrepresented as current | Historical 2025 offers inactive; do not copy legacy remote image URLs into data. |
 
@@ -82,6 +85,20 @@ Argon2id and JOSE versions are pinned in the lockfile. JWT uses an environment-m
 
 `src/modules/cart` contains the single route/controller layer, request schemas, service, repository, explicit DTO serializer and a separate synthetic demo function. One router instance is mounted at both intentional URL spellings. Protected operations reuse P05 auth and scope all data by its current authenticated UUID; the public demo never enters the repository.
 
-Cart writes acquire an owner row lock before reading quantities/caps or creating a cart, and share-lock the selected SKU for adds. Existing database uniqueness constraints and foreign keys remain in place. Reads load related catalog records sequentially in a Repeatable Read transaction to retain a consistent snapshot and avoid concurrent queries on the same pg connection. GET reprices for display; checkout remains P07 and must follow the same owner-lock order, revalidate/reprice, snapshot and clear atomically. Current cart operations do not reserve stock or create orders.
+Cart writes acquire an owner row lock before reading quantities/caps or creating a cart, and share-lock the selected SKU for adds. Existing database uniqueness constraints and foreign keys remain in place. Reads load related catalog records sequentially in a Repeatable Read transaction to retain a consistent snapshot and avoid concurrent queries on the same pg connection. GET reprices for display; P07 follows the same owner-lock order and revalidates/reprices/snapshots/consumes atomically. Cart operations themselves do not reserve stock or create orders.
 
 The local client remains reducer/localStorage based. P12 owns the authenticated frontend integration. [P06 contract](api-contract.md#p06-carts) records exact caps, DTOs, compatibility and errors; [verification](p06-verification.md) records actual database tests.
+
+## P07 checkout boundary
+
+`src/modules/orders` contains request/key validation, fingerprinting, route/controller, service, transaction repository, creation serializer and bounded retry policy. `src/modules/cart/locking.ts` supplies the shared User `FOR UPDATE` lock. The runtime injects the same Prisma client; all checkout persistence runs through its one interactive transaction, with no external side effects inside retries.
+
+The lock order is owner first, then cart lines in ascending ID, then the selected catalog rows in product/model/memory/color ID order. Replay is read after the owner lock and before cart validation. Each SKU join validates product ownership and takes `FOR SHARE` locks on Product, ProductModel, ProductMemorySize and ProductColor until commit, so names, prices and availability cannot change while being snapshotted. Different users can share catalog read locks. All P06 add/delete/clear operations acquire the same owner lock, including first-cart creation; this serializes cooperating checkout/cart writes for one user without relying on an in-process mutex.
+
+Isolation is explicitly **Read Committed**, chosen so a request waiting for another checkout's owner lock sees its committed order in the next statement. Existing `(userId,idempotencyKey)` uniqueness provides final duplicate protection. All order/item/history/receipt writes and purchased-line deletions use one transaction. A deletion count mismatch also throws and rolls back. Direct-item mode uses the same owner/catalog locking and order persistence but does not touch cart lines.
+
+Only known Prisma P2034 transaction conflicts are retried from the beginning, with three total attempts and 20/40 ms waits. The pinned PostgreSQL adapter maps serialization failure 40001 and deadlock 40P01 to that code. Unknown errors, unique violations, timeouts and uncertain commit outcomes propagate as sanitized failures. The transaction has a 5-second acquisition bound and 10-second execution bound, plus existing database timeouts. Request work is bounded by 50 lines/500 units; no payment, inventory decrement or network operation occurs within the transaction.
+
+This is a cooperating row-lock protocol, **not PostgreSQL Serializable isolation or proof of global serializability**. Arbitrary SQL writers and future admin workflows must follow documented ordering/invariants. [PostgreSQL's Read Committed rules](https://www.postgresql.org/docs/18/transaction-iso.html) and [row-lock behavior](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS) inform the design. Actual concurrent requests, observed database lock waits, catalog update waits and injected PostgreSQL failures are recorded in [P07 verification](p07-verification.md).
+
+P08 must add owner/ADMIN order reads and atomic ADMIN transitions while preserving the creation receipt and item snapshots. P09/P12 must document/adapt the explicit receipt DTO and retain client idempotency keys across uncertain responses. Boolean availability is checked but not reserved; payment, stock counts, refunds and shipping remain outside V1.

@@ -8,6 +8,7 @@ import { authRouter, authIpLimiter } from './modules/auth/routes.js';
 import type { AuthService } from './modules/auth/service.js';
 import type { PrismaClient } from './generated/prisma/client.js';
 import { cartRouter } from './modules/cart/routes.js';
+import { ordersRouter } from './modules/orders/routes.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
@@ -25,6 +26,7 @@ export interface AppDependencies {
   now?: () => Date;
   auth?: AuthService;
   cartDatabase?: PrismaClient;
+  ordersDatabase?: PrismaClient;
 }
 export function createApp(config: Env, logger: Logger = createLogger(config), databaseProbe?: () => Promise<void>, dependencies: AppDependencies = {}) {
   const checkDatabase = databaseProbe ? boundedReadiness(databaseProbe, config.DB_CHECK_TIMEOUT_MS) : undefined;
@@ -81,6 +83,7 @@ export function createApp(config: Env, logger: Logger = createLogger(config), da
   const cart = cartRouter(dependencies.cartDatabase, dependencies.auth);
   app.use('/api/ShoppingCart', cart);
   app.use('/api/shopping-cart', cart);
+  app.use('/api/orders', ordersRouter(dependencies.ordersDatabase, dependencies.auth));
   app.get('/media/demo-placeholder.svg', (_req, res, next) => {
     res.sendFile(fileURLToPath(new URL('../public/media/demo-placeholder.svg', import.meta.url)), (error) => {
       if (error) next(error);
