@@ -55,3 +55,10 @@ The schema is unchanged. The reconciled seed preserves all seven complete respon
 ## P05 identity enforcement
 
 No schema changes are required. Public registration stores trimmed, lowercase ASCII usernames/emails and uses the existing normalized unique indexes; concurrent unique violations become one generic account conflict. Credential lookup is parameterized and uses the same `lower(btrim(...))` expressions. The API chooses USER regardless of client intent and rejects unknown role fields. Only the explicit admin CLI chooses ADMIN. Existing accounts are not rewritten or promoted. Argon2id hashes stay internal; role authorization reads the current User row for each protected request. [Full identity policy](api-contract.md#identities-and-passwords).
+
+
+## P06 cart enforcement
+
+No schema or migration change is needed. `Cart.userId` uniqueness and full-SKU `CartItem` uniqueness are used by transactional upserts. The service acquires the owner User row lock before all writes so concurrent first adds, merges, deletes and clears share one ordering point. Composite option foreign keys supplement explicit same-product/availability checks. Caps (99 per line, 50 lines, 500 total units) are application invariants under that lock; direct database writers must honor the protocol.
+
+Cart currency is stored as CNY. `CartItem.unitPrice` stores the server-calculated full-model base plus memory increment on add/merge. GET computes current-price display amounts from a consistent catalog snapshot without updating this cache. Deleted/cleared lines do not delete the reusable cart. P07 must acquire the same owner lock, revalidate all selected configurations and monetary limits, and perform order creation and cart clearing atomically. [Exact cart DTO contract](api-contract.md#p06-carts).

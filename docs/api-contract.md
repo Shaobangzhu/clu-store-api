@@ -1,6 +1,6 @@
 # CLU Store API — V1 contract
 
-**Status:** P05 implements registration/login and reusable JWT/role guards alongside the seven P04 public reads and `/health`/`/ready`. Cart, order and documentation UI routes remain future V1 work.
+**Status:** P06 implements persistent owned carts and the public synthetic cart demo, alongside P05 auth, P04 public reads and `/health`/`/ready`. Checkout, order and documentation UI routes remain future V1 work.
 
 ## Response and money rules
 
@@ -151,3 +151,62 @@ Issuer and audience are validated against `JWT_ISSUER` (default `clu-store-api`)
 `requireAuth(service)` accepts only the Authorization Bearer header (maximum 4096 characters), verifies the token, then fetches a safe user projection by subject from PostgreSQL. A deleted user is denied. `requireRole('ADMIN')` checks the freshly fetched role; an embedded token role claim is ignored. Role freshness is one database read at the start of every protected request; it is not a guarantee against a role change midway through that request. Future admin mutations must consider their transaction boundary.
 
 This is a single-service demo access-token design: no refresh tokens, logout/revocation list, MFA, email verification, password recovery/change, key rotation overlap or multi-service key distribution. A stolen bearer token works until expiry unless its user is deleted or the signing key changes. Password changes made out of band do not revoke existing tokens. HS256 verification requires the signing secret, so any verifier can mint tokens. Use TLS before network exposure; the frontend should manage token storage and XSS risk deliberately. P06 must mount the reusable guard and derive ownership from `res.locals.user.id`.
+
+
+## P06 carts
+
+One router is mounted explicitly at **both** `/api/ShoppingCart` (legacy) and `/api/shopping-cart` (canonical). Prefixes and child paths are case-sensitive; `/api/shoppingcart`, `/api/Shopping-Cart` and `/Items` are not aliases. Express retains its usual optional trailing-slash behavior. The same domain handlers, ownership rules and transactions apply through either prefix.
+
+| Relative method/path | Auth | Result |
+|---|---|---|
+| `GET /fake-shopping-cart` | Public | 200 deterministic original synthetic demo |
+| `GET /` | JWT | 200 current owned cart; safe empty cart if none exists |
+| `POST /items` | JWT | 201 new line or 200 existing full-SKU merge; `data` is the resulting line |
+| `DELETE /items/:id` | JWT | 204 owned line removed; foreign/absent line is indistinguishable 404 |
+| `DELETE /items` | JWT | 204 own cart cleared; idempotent even without a cart |
+
+Private routes use `requireAuth`, derive ownership solely from `res.locals.user.id` and set `Cache-Control: no-store`. Missing/invalid bearer tokens receive the existing 401 envelope when auth is configured; missing auth/database configuration fails closed with 503. No request field can choose the user or cart. Query parameters are rejected on all cart routes; DELETE accepts no body or an empty object only. A GET body has no effect on ownership.
+
+### Add validation, compatibility and limits
+
+Canonical body: `{productId,modelId,memorySizeId,color,qty}`. IDs and qty must be JSON integers in the positive PostgreSQL Int32 range, with no coercion from strings. Color is a 1–100 character string without control characters; it must match the stored name exactly, including case and spaces. Unknown fields such as `userId`, `cartId`, `currency` or `unitPrice` are rejected with 400.
+
+Legacy `name`, `imageSrc`, `model`, `modelPrice`, `memorySize`, `memorySizePrice` are optional migration fields only. Text is capped at 2048 characters; the two price fields accept finite numbers or strings up to 100 characters. Their values are discarded by validation before reaching the service/repository. They are never used as product identity, image content, price or authority. Successful use returns `meta:{deprecatedFields:[...]}` with the supplied field names; canonical requests use `meta:null`.
+
+Per-line merged quantity is capped at **99**, distinct full configurations at **50**, and the sum of quantities at **500**. A syntactically valid request exceeding any limit returns `422 CART_LIMIT_EXCEEDED`. Zero, negative, fractional, string or missing qty is `400 VALIDATION_ERROR`. Existing lines may merge when the distinct-line cap is reached if the other limits permit it. These are explicit V1 demo limits, not facts inferred from historical samples.
+
+Missing product is `404 PRODUCT_NOT_FOUND`. Unknown/cross-product model, memory or color is `422 INVALID_PRODUCT_CONFIGURATION`; the product, model, memory and color must all be available or the add returns `422 PRODUCT_UNAVAILABLE`. Invalid requests leave cart data unchanged. A computed unit price above Decimal(12,2)'s `9999999999.99` maximum is rejected as an invalid configuration before storage. Marketing `soldOut` does not determine SKU availability.
+
+### Money and DTOs
+
+The sole unit-price formula is `ProductModel.price + ProductMemorySize.extraPrice`, using Prisma Decimal. `Product.startingPrice` is never added. Line total is unit price times quantity; cart total is the Decimal sum of line totals, with no shipping/tax/payment components.
+
+A private cart's `data` is `{id,isDemo:false,currency:"CNY",items,itemCount,totalQty,totalAmount}`. `id` is null until the first successful add creates the cart. GET does not create rows. `itemCount` counts distinct lines; `totalQty` sums quantities. Empty carts have `items:[]`, counts 0 and `totalAmount:"0.00"`. Once created, the same cart remains after clear. Items sort by ascending line ID.
+
+Each structured line is:
+
+```text
+{
+  id,
+  product: {id,name,image},
+  model: {id,name,specification,price},
+  memorySize: {id,name,price},
+  color, qty, currency: "CNY", unitPrice, lineTotal, available
+}
+```
+
+All prices and amounts are fixed two-decimal JSON strings. Nested model `price` is the full base; nested memory `price` is the increment. Names/specifications/media come from the database, and images pass the existing local-media serializer validation. Cart owner IDs, password hashes and raw Prisma rows are not exposed.
+
+Each successful add stores the calculated unit price; a merge replaces the cached unit price for the entire resulting line. GET displays **current** catalog prices from a Repeatable Read snapshot, recalculates totals, and does not rewrite the stored cache. An existing line that later becomes unavailable remains visible with `available:false`, its current price and quantity, and can be removed/cleared; adding more is rejected. Totals include such lines as a display estimate, not a purchase guarantee. P07 must revalidate prices, availability and the order monetary column limits within checkout; neither cache nor a prior GET is authoritative.
+
+### Concurrency and ownership
+
+Every add, remove and clear transaction first locks the authenticated User row with `FOR UPDATE`, even before a cart exists. Read Committed then reads the cart after acquiring that lock. This serializes cooperating writes for one owner, prevents lost increments and makes line/quantity caps atomic. The existing unique cart-per-user and full `(cartId,productId,modelId,memorySizeId,color)` indexes remain final database protections; upserts preserve line identity on merge. The current SKU query checks all relationships in one parameterized statement and takes share locks on the selected product/model/memory/color rows until commit, keeping price and availability stable for that add.
+
+Deletes filter through the cart's authenticated owner. Foreign and missing line IDs return `404 CART_ITEM_NOT_FOUND` with the same message. Clear deletes only that owner's lines and does not delete the cart. Mutations have a 5-second transaction acquisition limit and 10-second transaction deadline, also subject to the existing shorter database query timeout. Arbitrary out-of-band writers are not covered by the application cap protocol. P07 checkout must acquire the same owner lock before reading/mutating the cart; inventory reservation and checkout are not implemented here.
+
+### Synthetic demo and frontend boundary
+
+The public demo uses no database, account, token, request body or clock. It always returns `isDemo:true`, one original sample line of quantity 2, full base `"100.00"`, memory increment `"20.00"`, unit price `"120.00"` and total `"240.00"`. Cart, line, product and option IDs are null; `available:false` makes its non-purchasable purpose explicit. Names/specification are original demo text and the image is the reviewed local placeholder. These values are not catalog fixtures and are never persisted. Supplying a valid/invalid bearer header does not personalize the public result.
+
+The inspected local frontend uses a reducer persisted to localStorage. P06 provides backend routes only. P12 must implement the envelope/DTO adapter and authenticated cart workflow explicitly; there is no automatic synchronization or mock bridge.

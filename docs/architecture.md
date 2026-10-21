@@ -1,6 +1,6 @@
 # CLU Store API — V1 architecture
 
-**Status:** P05 registration/login, JWT verification and role guards are implemented alongside P04 public reads, the HTTP/database foundation and demo seed. Cart/order services remain planned; this document describes the V1 target.
+**Status:** P06 persistent user-owned carts, P05 auth and P04 public reads are implemented alongside the HTTP/database foundation and demo seed. Checkout/order services remain planned; this document describes the V1 target.
 
 ## Decisions
 
@@ -76,3 +76,12 @@ See [api-contract.md](api-contract.md), [data-model.md](data-model.md), [fixture
 The original case-insensitive functional unique indexes remain authoritative. Registration can only create USER; `scripts/create-admin.ts` is an explicit create-only operator path using a password from stdin and an explicit database-name confirmation. The seed never creates an administrator. The API selects or serializes safe user fields explicitly; password hashes only enter credential verification.
 
 Argon2id and JOSE versions are pinned in the lockfile. JWT uses an environment-managed 256-bit HS256 key with issuer/audience checks and a 15-minute default expiration. Every protected request re-fetches the role. Per-IP/per-identifier limits and bounded hashing protect a single process; shared limiting, TLS, proxy configuration and token lifecycle enhancements remain deployment gates. Exact policies, residual risks and P06 handoff are in [the auth contract](api-contract.md#p05-authentication) and [verification](p05-verification.md).
+
+
+## P06 cart boundary
+
+`src/modules/cart` contains the single route/controller layer, request schemas, service, repository, explicit DTO serializer and a separate synthetic demo function. One router instance is mounted at both intentional URL spellings. Protected operations reuse P05 auth and scope all data by its current authenticated UUID; the public demo never enters the repository.
+
+Cart writes acquire an owner row lock before reading quantities/caps or creating a cart, and share-lock the selected SKU for adds. Existing database uniqueness constraints and foreign keys remain in place. Reads load related catalog records sequentially in a Repeatable Read transaction to retain a consistent snapshot and avoid concurrent queries on the same pg connection. GET reprices for display; checkout remains P07 and must follow the same owner-lock order, revalidate/reprice, snapshot and clear atomically. Current cart operations do not reserve stock or create orders.
+
+The local client remains reducer/localStorage based. P12 owns the authenticated frontend integration. [P06 contract](api-contract.md#p06-carts) records exact caps, DTOs, compatibility and errors; [verification](p06-verification.md) records actual database tests.

@@ -14,7 +14,7 @@ const auth = database && config.JWT_SECRET ? createAuthService(createAuthReposit
 if (auth) await initializePasswordHashing();
 else logger.warn('Authentication is disabled until DATABASE_URL and JWT_SECRET are configured');
 const server = createApp(config, logger, database?.check, {
-  ...(database ? { catalog: createCatalogDatabase(database.client) } : {}), ...(auth ? { auth } : {}),
+  ...(database ? { catalog: createCatalogDatabase(database.client), cartDatabase: database.client } : {}), ...(auth ? { auth } : {}),
 }).listen(config.PORT, config.HOST, () => {
   logger.info({ host: config.HOST, port: config.PORT }, 'HTTP server listening');
 });

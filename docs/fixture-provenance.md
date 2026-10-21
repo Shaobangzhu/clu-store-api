@@ -95,3 +95,8 @@ The sample curation command uses the frozen frontend baseline and the six files.
 Seed target guards require local `clu_store_dev`/`clu_dev`, refuse production mode, and verify the actual role/database. Serializable upserts and guarded ID corrections run atomically. The seed does not prune/reset data or create users. Existing conflicting IDs or modified reconciliation candidates cause failure. Fixture-owned fields are authoritative on explicit reruns. Sequence synchronization never rewinds counters; PostgreSQL sequence changes themselves are not transactional.
 
 See [p03-sample-reconciliation.md](p03-sample-reconciliation.md) for the two successful sample-backed runs and [p03-verification.md](p03-verification.md) for the historical frontend-only first pass.
+
+
+## P06 public cart demo
+
+`src/modules/cart/demo.ts` is new original synthetic presentation, not imported sample evidence. It names a synthetic device, base model and memory upgrade, uses the existing original `/media/demo-placeholder.svg`, and displays base CNY 100.00 plus increment 20.00 for two units. All entity IDs are null, `isDemo` is true and the line is unavailable for purchase. It does not read or write the database, reference an actual SKU, personalize by token, or create a user. Real cart tests use separately generated test users/products/options with exact-ID cleanup; those are test-only fixtures, not seed changes.

@@ -107,3 +107,20 @@ npm run build
 The auth suite generates a fresh signing key/password per run, creates uniquely named test users and performs real concurrent inserts. Its finalizer deletes only the exact usernames allocated by that run and asserts the user count equals the initial count. CLI verification creates an admin only in the test database and removes it afterward. It never resets/truncates the database or touches development accounts. Catalog fixtures still roll back. A force-killed test process can leave its prefixed test users; inspect those identities explicitly rather than resetting shared data.
 
 `npm test` includes configuration, Pino redaction, malformed-JSON rate limiting and bounded-password-work checks without a database. Supertest still needs permission to bind localhost. See [P05 verification](p05-verification.md) for actual command outcomes and [the auth contract](api-contract.md#p05-authentication) for token/lifecycle limitations.
+
+
+## P06 cart verification and integration
+
+P06 uses the existing database/schema and JWT configuration; no dependency installation, migration, seed update or development account creation is required. Both `/api/shopping-cart` and `/api/ShoppingCart` expose the same router. Private operations need a valid P05 token and configured database; the synthetic demo is independently available without either dependency.
+
+```sh
+npm run db:migrate:test
+npm run test:integration -- tests/integration/cart.test.ts
+npm run lint
+npm run typecheck
+npm run build
+```
+
+The cart suite validates the guarded test database/role, creates users and catalog options with generated identities, then exercises actual committed transactions and concurrent requests. Per-test cleanup deletes only those exact users/products and their dependent test records. Final counts for User, Cart, CartItem, Product, ProductModel, ProductMemorySize and ProductColor must match the initial counts. No reset/truncate is used and development data is untouched. A killed test process may leave its own generated fixtures; inspect them explicitly rather than resetting shared data.
+
+The full integration suite also covers auth/catalog behavior after shared app wiring changes. See [P06 verification](p06-verification.md). The sibling frontend was inspected read-only: its cart uses a reducer and localStorage. Frontend API integration remains P12 work.
