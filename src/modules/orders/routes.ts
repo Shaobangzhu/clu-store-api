@@ -1,3 +1,4 @@
+import { contractRoute } from '../../contracts/api.js';
 import { Router, type RequestHandler } from 'express';
 import type { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client.js';
@@ -32,22 +33,22 @@ export function ordersRouter(database: PrismaClient | undefined, auth: AuthServi
   const router = Router({ caseSensitive: true });
   const service = createOrdersService(createOrdersRepository(database));
   const management = createOrderManagementService(createOrderManagementRepository(database));
-  router.post('/place', requireAuth(auth), validateKey, validate(placeRequest), async (_req, res) => {
+  contractRoute(router, 'place', requireAuth(auth), validateKey, validate(placeRequest), async (_req, res) => {
     const { body } = res.locals.validated as z.output<typeof placeRequest>;
     const result = await service.place(res.locals.user!.id, body, res.locals.idempotencyKey as string | undefined);
     res.locals.success(result.order, result.created ? 201 : 200);
   });
-  router.get('/', requireAuth(auth), rejectUnparsedBody, validate(orderListRequest), async (_req, res) => {
+  contractRoute(router, 'ownOrders', requireAuth(auth), rejectUnparsedBody, validate(orderListRequest), async (_req, res) => {
     const { query } = res.locals.validated as z.output<typeof orderListRequest>;
     const result = await management.list(query, res.locals.user!.id);
     res.locals.success(result.data, 200, result.meta);
   });
-  router.get('/:id', requireAuth(auth), rejectUnparsedBody, validate(orderDetailRequest), async (_req, res) => {
+  contractRoute(router, 'order', requireAuth(auth), rejectUnparsedBody, validate(orderDetailRequest), async (_req, res) => {
     const { params } = res.locals.validated as z.output<typeof orderDetailRequest>;
     res.locals.success(await management.detail(params.id, res.locals.user!));
   });
   for (const [path, target] of [['approve', 'approved'], ['reject', 'rejected']] as const) {
-    router.post(`/:id/${path}`, requireAuth(auth), requireRole('ADMIN'), rejectUnparsedBody, validate(decisionRequest), async (_req, res) => {
+    contractRoute(router, path === 'approve' ? 'approve' : 'reject', requireAuth(auth), requireRole('ADMIN'), rejectUnparsedBody, validate(decisionRequest), async (_req, res) => {
       const { params, body } = res.locals.validated as z.output<typeof decisionRequest>;
       const data = await management.decide(params.id, res.locals.user!.id, target, body?.metadata?.value);
       res.locals.success(data, 200, body?.metadata?.legacy ? { deprecatedFields: ['metadata'] } : null);
@@ -59,7 +60,7 @@ export function ordersRouter(database: PrismaClient | undefined, auth: AuthServi
 export function adminOrdersRouter(database: PrismaClient | undefined, auth: AuthService | undefined) {
   const router = Router({ caseSensitive: true });
   const management = createOrderManagementService(createOrderManagementRepository(database));
-  router.get('/', requireAuth(auth), requireRole('ADMIN'), rejectUnparsedBody, validate(orderListRequest), async (_req, res) => {
+  contractRoute(router, 'adminOrders', requireAuth(auth), requireRole('ADMIN'), rejectUnparsedBody, validate(orderListRequest), async (_req, res) => {
     const { query } = res.locals.validated as z.output<typeof orderListRequest>;
     const result = await management.list(query);
     res.locals.success(result.data, 200, result.meta);

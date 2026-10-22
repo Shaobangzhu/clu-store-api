@@ -1,10 +1,12 @@
 import { Prisma, type User, type Role } from '../../generated/prisma/client.js';
 import { AppError } from '../../lib/errors.js';
+import type { z } from 'zod';
+import type { safeUser } from '../../contracts/responses.js';
 
 export type AuthDatabase = Pick<Prisma.TransactionClient, 'user' | '$queryRaw'>;
 export const safeUserSelect = { id: true, username: true, email: true, role: true, createdAt: true } as const;
 export type SafeUser = Pick<User, keyof typeof safeUserSelect>;
-export function serializeUser(user: SafeUser) {
+export function serializeUser(user: SafeUser): z.output<typeof safeUser> {
   return { id: user.id, username: user.username, email: user.email, role: user.role, createdAt: user.createdAt.toISOString() };
 }
 export function createAuthRepository(database: AuthDatabase) {

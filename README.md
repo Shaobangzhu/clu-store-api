@@ -1,6 +1,6 @@
 # CLU Store API
 
-P08 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads, registration/login, JWT guards, persistent user-owned carts, atomic checkout, scoped order reads and ADMIN decisions are implemented.
+P09 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads, registration/login, JWT guards, persistent user-owned carts, atomic checkout, scoped order reads, ADMIN decisions and generated OpenAPI/Postman documentation are implemented.
 
 ## Local development
 
@@ -103,3 +103,17 @@ Lists accept `pageSize` (default 20, max 100), `sort` (`newest`/`oldest`) and an
 Decision bodies may be omitted or `{}`; optional canonical metadata is `{metadata:{note:"Reviewed"}}`. A bounded legacy string becomes a plain note and is marked deprecated. Status update and history insert commit in one PostgreSQL transaction. No payments, payment URI or reverse transitions are implemented.
 
 P08 adds one reviewed pagination index migration. Apply it locally with `npm run db:migrate:dev`; never accept a reset. See [P08 contract](docs/api-contract.md#p08-order-reads-and-decisions) and [verification](docs/p08-verification.md).
+
+## API documentation and Postman (P09)
+
+Open `GET /docs` for Swagger UI and `GET /docs/openapi.json` for raw OpenAPI 3.1 JSON. UI assets are served locally, external validation is disabled and authorization is not persisted. The raw spec, HTML and supporting static assets use their declared content types outside the application envelope.
+
+The [generated spec](docs/openapi.json) and [sanitized Postman collection](postman/CLU_Store_API.sanitized.postman_collection.json) cover all 17 historical method/path shapes plus current aliases and endpoints: 30 unique operations. Historical paths are functional; new payloads require the frontend adapter for `{success,data,meta}`. See the [Postman import/run guide](postman/README.md) before sending requests. Exported `baseUrl` and `accessToken` are empty and must be set privately. Synthetic example accounts/SKUs/orders are not provisioned.
+
+```sh
+npm run docs:generate
+npm run docs:check
+npm run test:docs
+```
+
+Routers take their methods/paths from `src/contracts/api.ts`, referencing the existing runtime Zod request schemas. Response serializers use types inferred from shared Zod DTOs. Both artifacts are generated from that catalog with Zod's native JSON Schema conversion; do not edit generated JSON. [Maintenance and validation](docs/openapi-maintenance.md) explains the source boundary, schema limitations and sensitive-source scan. [P09 verification](docs/p09-verification.md) records actual results. The original Postman collection stays external and is never a generation template.

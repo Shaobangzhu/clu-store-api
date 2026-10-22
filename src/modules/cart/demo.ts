@@ -1,9 +1,11 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import { serializeMoney } from '../../lib/money.js';
+import type { z } from 'zod';
+import type { cartDemo } from '../../contracts/responses.js';
 
 // Original synthetic presentation only. Null IDs cannot be used as sellable SKU IDs.
 // No database access, account/token inputs, clocks, or real catalog dependencies.
-export function demoCart() {
+export function demoCart(): z.output<typeof cartDemo> {
   const modelPrice = new Prisma.Decimal('100.00');
   const memoryPrice = new Prisma.Decimal('20.00');
   const unitPrice = modelPrice.plus(memoryPrice);

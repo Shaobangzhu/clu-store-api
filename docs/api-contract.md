@@ -1,6 +1,6 @@
 # CLU Store API — V1 contract
 
-**Status:** P08 implements scoped order reads and ADMIN transitions alongside P07 checkout, P06 carts, P05 auth, P04 public reads and `/health`/`/ready`. Documentation UI remains future work.
+**Status:** P09 adds generated OpenAPI 3.1, local Swagger UI and sanitized Postman artifacts to the implemented P04–P08 API. The generated schemas complement this detailed semantic contract.
 
 ## Response and money rules
 
@@ -40,7 +40,7 @@ The original paths remain callable in V1, but the new envelope and validation ru
 
 ### New V1 routes
 
-`GET /api/categories` (public navigation summaries); `GET /api/orders` (paginated own orders); `GET /api/admin/orders` (ADMIN paginated all orders; search/filtering is not implemented in P08); `GET /health` (liveness); `GET /ready` (database readiness); `GET /docs` (planned OpenAPI UI).
+`GET /api/categories` (public navigation summaries); `GET /api/orders` (paginated own orders); `GET /api/admin/orders` (ADMIN paginated all orders; search/filtering is not implemented); `GET /health` (liveness); `GET /ready` (database readiness); `GET /docs` (Swagger UI); `GET /docs/openapi.json` (raw OpenAPI 3.1 JSON).
 
 ### Compatibility and deprecation map
 
@@ -321,3 +321,13 @@ For competing valid decisions that complete without infrastructure failure, one 
 Transactions retain the 5-second acquisition and 10-second execution limits plus configured database timeouts. Decision failures are not automatically retried: unexpected database/timeout failures return sanitized 500; missing dependencies return 503. After an uncertain network outcome, read the current order/history; a repeated action will not insert another transition. SQL history-edge checks complement the application predicate; arbitrary direct SQL writers can still violate application lifecycle rules.
 
 See [P08 architecture](architecture.md#p08-order-management-boundary) and [verification](p08-verification.md) for observed PostgreSQL races and rollback results.
+
+## P09 generated documentation
+
+`GET /docs` serves HTML Swagger UI using only the allowlisted local `/docs/assets/swagger-ui.css`, `/docs/assets/swagger-ui-bundle.js` and `/docs/assets/init.js`. `GET /docs/openapi.json` returns the raw specification without an envelope. Both are public and use no-store caching. Standard request IDs, CORS, global limits and security headers still apply. A docs-scoped CSP permits local scripts/styles and same-origin connections; global API CSP is preserved. External validators, URL-driven UI configuration and persisted authorization are disabled. Loading the UI does not execute business requests.
+
+The operation catalog covers 30 unique method/path pairs: the original 17, the five canonical cart counterparts to historical casing, category navigation, own/admin order lists, health/readiness, UI/raw spec and the existing placeholder image. The three UI asset paths are supporting files, not additional business operations. OpenAPI retains exact `ShoppingCart` casing and identifies its canonical lowercase counterpart. The raw spec and image/HTML responses are explicit envelope exceptions; DELETE 204 and standard HEAD/conditional responses remain bodyless.
+
+Runtime Zod request schemas are converted in input mode. Response DTO schemas are shared with serializer types; OpenAPI success/error envelopes and examples are validated. Runtime refinements such as normalized identity rules, matching confirmations, cursor decoding/sort matching and database business checks remain authoritative and are explained in descriptions. JSON Schema cannot fully express those transformations. No historical request body, authorization, server origin, cURL description or legal text is used as an example source.
+
+Both generated artifacts document decimal monetary strings, full model/incremental memory pricing, JWT bearer requirements, ADMIN-only terminal transitions, idempotent creation/replay status codes, distinct pagination styles and deprecated compatibility fields. Postman uses only `{{baseUrl}}` URLs and `{{accessToken}}` bearer variables, with empty exported values. Its assertions and illustrative responses do not provision accounts or run follow-up requests. See [maintenance](openapi-maintenance.md), [Postman guide](../postman/README.md) and [verification](p09-verification.md).

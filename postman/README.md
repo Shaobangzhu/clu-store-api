@@ -1,0 +1,15 @@
+# CLU Store API sanitized Postman collection
+
+Import CLU_Store_API.sanitized.postman_collection.json as Postman v2.1. It is generated only from the current runtime/Zod contract, with one request per method/path, including case-accurate legacy aliases. Importing it runs nothing. Synthetic credentials, SKU IDs and response examples are illustrative and are NOT provisioned.
+
+1. Start the local API and migrated PostgreSQL as described in ../README.md. Set baseUrl to the URL of your locally running API; it is deliberately unset in the export. Configure JWT settings before using auth.
+2. Choose a unique username/email and your own password for registration, or use an existing local account. Email and a matching canonical confirmPassword are required. The example account is not pre-created.
+3. Run login manually. Copy its returned token into a private local accessToken variable; do not export or commit populated secrets. All protected requests use {{accessToken}} through Postman bearer auth. Public requests explicitly use noauth. No script captures credentials or changes variables.
+4. Read products/categories and select actual available model/memory/color IDs. Update request bodies before adding a line. Save the returned cart line ID as cartItemId if needed. Product model price is the full base; memory price is the increment. Monetary JSON values are strings.
+5. For cart checkout send {}. Set a fresh idempotencyKey for each new purchase intent, retain it for retries, and save the returned orderId. Replay returns 200 with the original pending receipt; use GET order for current state. A direct SKU checkout preserves the cart.
+6. Own-order lists use pageSize/sort/cursor. Copy nextCursor into ordersCursor and enable that optional query parameter. Product lists separately use page/pageSize/keyword/category/sort.
+7. To inspect all orders or approve/reject, supply an explicitly provisioned ADMIN token. Provisioning is the operator CLI in the repository README, never a seeded account. Only pending orders transition; an approve/reject race has one winner and one 409. A note is plain owner-visible text. Do not place secrets in metadata.
+
+Run requests manually in the intended sequence. POST/DELETE requests mutate local data; do not bulk-run this collection against valuable accounts. Response examples and generated JSON schema assertions are harmless read-only checks, without pre-request/network scripts or credential capture. Responses use {success,data,meta}; legacy raw payload consumers need a frontend adapter. Bodyless deletes, HTML/SVG assets and raw OpenAPI are explicit exceptions. Global errors, missing configuration and empty data are documented rather than mocked.
+
+Refresh with npm run docs:generate; verify with npm run docs:check and npm run test:docs. Do not edit generated JSON. GET /docs serves local Swagger UI and GET /docs/openapi.json serves the same specification. The original Black_Apple_API.postman_collection.json remains sensitive external input and must never be copied into tracked paths.

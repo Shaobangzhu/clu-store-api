@@ -1,3 +1,4 @@
+import { contractRoute, mounts, legacyCartMount } from './contracts/api.js';
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import type { CatalogDatabase } from './lib/catalog-database.js';
@@ -20,6 +21,7 @@ import { AppError } from './lib/errors.js';
 import { requestId } from './middleware/request-id.js';
 import { envelope } from './middleware/envelope.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { documentationRouter } from './documentation/routes.js';
 
 export interface AppDependencies {
   catalog?: CatalogDatabase;
@@ -59,10 +61,11 @@ export function createApp(config: Env, logger: Logger = createLogger(config), da
     legacyHeaders: false,
     handler: (_req, _res, next) => next(new AppError(429, 'RATE_LIMITED', 'Too many requests')),
   }));
-  app.use('/api/auth', authIpLimiter(config));
+  app.use(mounts.auth, authIpLimiter(config));
   app.use(express.json({ limit: config.JSON_BODY_LIMIT_BYTES }));
-  app.get('/health', (_req, res) => res.locals.success({ status: 'ok' }));
-  app.get('/ready', async (_req, res) => {
+  app.use(documentationRouter());
+  contractRoute(app, 'health', (_req, res) => res.locals.success({ status: 'ok' }));
+  contractRoute(app, 'ready', async (_req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     if (!checkDatabase) {
       throw new AppError(503, 'SERVICE_NOT_READY', 'Database readiness is not configured',
@@ -76,16 +79,16 @@ export function createApp(config: Env, logger: Logger = createLogger(config), da
     }
     res.locals.success({ status: 'ready', database: 'up' });
   });
-  app.use('/api/products', productsRouter(dependencies.catalog, dependencies.now ?? (() => new Date())));
-  app.use('/api/categories', categoriesRouter(dependencies.catalog));
-  app.use('/api/information', informationRouter(dependencies.catalog));
-  app.use('/api/auth', authRouter(dependencies.auth, config));
+  app.use(mounts.products, productsRouter(dependencies.catalog, dependencies.now ?? (() => new Date())));
+  app.use(mounts.categories, categoriesRouter(dependencies.catalog));
+  app.use(mounts.information, informationRouter(dependencies.catalog));
+  app.use(mounts.auth, authRouter(dependencies.auth, config));
   const cart = cartRouter(dependencies.cartDatabase, dependencies.auth);
-  app.use('/api/ShoppingCart', cart);
-  app.use('/api/shopping-cart', cart);
-  app.use('/api/orders', ordersRouter(dependencies.ordersDatabase, dependencies.auth));
-  app.use('/api/admin/orders', adminOrdersRouter(dependencies.ordersDatabase, dependencies.auth));
-  app.get('/media/demo-placeholder.svg', (_req, res, next) => {
+  app.use(legacyCartMount, cart);
+  app.use(mounts.cart, cart);
+  app.use(mounts.orders, ordersRouter(dependencies.ordersDatabase, dependencies.auth));
+  app.use(mounts.adminOrders, adminOrdersRouter(dependencies.ordersDatabase, dependencies.auth));
+  contractRoute(app, 'media', (_req, res, next) => {
     res.sendFile(fileURLToPath(new URL('../public/media/demo-placeholder.svg', import.meta.url)), (error) => {
       if (error) next(error);
     });

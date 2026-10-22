@@ -15,7 +15,8 @@ const cursor = z.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/).transform((v
   }
 });
 export const orderListRequest = z.object({ body: z.undefined(), query: z.object({
-  pageSize: z.string().max(3).regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().max(100)).default(20),
+  pageSize: z.string().max(3).regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().max(100)).default(20)
+    .meta({ description: 'Plain positive decimal integer, maximum 100, default 20. No repeated values.', default: '20' }),
   sort: sort.default('newest'), cursor: cursor.optional(),
 }).strict().refine((query) => !query.cursor || query.cursor.sort === query.sort, { path: ['cursor'] }) });
 export const orderDetailRequest = z.object({ params, query: z.object({}).strict(), body: z.undefined() });
@@ -29,7 +30,7 @@ const note = z.string().max(1000).trim().min(1).max(500).regex(/^[^\p{Cc}]*$/u);
 export const decisionMetadata = z.object({ note }).strict();
 const metadata = z.union([
   decisionMetadata.transform((value) => ({ value, legacy: false })),
-  note.transform((value) => ({ value: { note: value }, legacy: true })),
+  note.transform((value) => ({ value: { note: value }, legacy: true })).meta({ deprecated: true, description: 'Deprecated string metadata: trimmed into a plain note, never parsed as JSON or trusted for authority.' }),
 ]);
 export const decisionRequest = z.object({ params, query: z.object({}).strict(), body: z.object({
   metadata: metadata.optional(),

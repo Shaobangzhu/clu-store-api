@@ -1,6 +1,6 @@
 # CLU Store API — V1 architecture
 
-**Status:** P08 scoped order reads and ADMIN transitions, P07 atomic checkout, P06 persistent user-owned carts, P05 auth and P04 public reads are implemented alongside the HTTP/database foundation and demo seed. This document also describes remaining V1 work.
+**Status:** P09 generated documentation and the P04–P08 read/auth/cart/checkout/order API are implemented alongside the HTTP/database foundation and demo seed. This document also describes remaining V1 work.
 
 ## Decisions
 
@@ -114,3 +114,13 @@ Detail and list loads use Repeatable Read transactions and sequential batched ch
 Decisions use Read Committed. Lock order is operator User `FOR SHARE`, then the conditional order UPDATE; the operator role is rechecked while locked. Unlike an exclusive operator lock, share locks permit same-ADMIN concurrent actions to exercise the order predicate. PostgreSQL rechecks the pending predicate after a competing update commits. The winner records its terminal history with authenticated operator and the exact PostgreSQL updatedAt timestamp. The loser returns 409; missing IDs return 404. A history insert failure rolls back status/updatedAt. No item, total, currency, key, fingerprint or order receipt metadata is rewritten.
 
 P08 does not automatically retry decisions, call external services, create payment URIs or add reverse transitions. Request-start role freshness remains the policy for reads; mutations additionally hold the operator lock through commit. Direct database writes remain outside the lifecycle guarantee. The relevant PostgreSQL mechanisms are documented in [Read Committed update behavior](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED) and [row locking](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS). Actual observations are in [P08 verification](p08-verification.md).
+
+## P09 contract generation boundary
+
+`src/contracts/api.ts` supplies runtime methods, local paths, mount prefixes and documentation metadata. Router handlers keep their existing validation/auth/business behavior and bind through that catalog. Existing Zod request schemas remain the validation source; `src/contracts/responses.ts` defines DTO shapes used by serializer return types and the generators. P07's placement schema is shared from there, preserving replay behavior.
+
+`src/documentation/openapi.ts` uses Zod 4's native input/output JSON Schema conversion to produce OpenAPI 3.1 components. `src/documentation/postman.ts` generates the sanitized collection solely from that spec. No original collection content is used for generation. The original is optional read-only validation input for historical path coverage and blocked credential/origin comparisons; private values are never reported.
+
+The public documentation router serves a cached in-memory spec and a fixed local Swagger UI shell. It exposes only three selected assets from the pinned dependency, with a scoped CSP, same-origin requests, no external validator and no persistent token storage. Supporting assets are outside the business operation inventory.
+
+Validation checks reproducibility, all 17 historical routes, exact aliases, security declarations, examples, decimal response types, bodyless statuses, official Postman v2.1 schema and unique endpoint coverage. The scanner rejects real/token-like JWTs, non-variable bearer values, Authorization headers, non-synthetic credentials, unapproved origins and private/original values. P09 verification includes all existing PostgreSQL suites after shared route/type wiring changes. This establishes contract consistency for covered behavior; it is not a substitute for future CI/security work or the P12 frontend adapter.

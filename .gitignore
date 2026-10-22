@@ -150,6 +150,8 @@ vite.config.ts.timestamp-*
 
 # Local input material and database volumes
 local-input/
+# Historical collection contains credentials; keep the supplied original external.
+Black_Apple_API.postman_collection.json
 local-data/
 .data/
 postgres-data/

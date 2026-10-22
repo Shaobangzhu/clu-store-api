@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 const cleanText = z.string().max(200).trim().max(100).regex(/^[^\p{Cc}]*$/u);
 const queryInteger = (max: number, fallback: number) => z.string().max(10)
-  .regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().max(max)).default(fallback);
+  .regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().max(max)).default(fallback)
+  .meta({ description: `Plain positive decimal integer, maximum ${max}, default ${fallback}. No signs, leading zeros, fractions or repeated values.`, default: String(fallback) });
 export const emptyReadRequest = z.object({ query: z.object({}).strict() });
 export const listRequest = z.object({ query: z.object({
   keyword: cleanText.transform((value) => value || undefined).optional(),

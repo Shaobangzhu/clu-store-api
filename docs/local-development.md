@@ -2,6 +2,8 @@
 
 Local development uses the installed Docker engine with a dedicated PostgreSQL 18 Compose project. P04–P08 provide public reads, auth, carts, transactional checkout, scoped order reads and ADMIN decisions. Node 24 and npm 11 are required.
 
+P09 adds local `/docs`, `/docs/openapi.json` and generated safe import artifacts. Documentation generation and targeted docs tests need no database; full integration tests retain the guarded local PostgreSQL requirements below.
+
 ## First setup
 
 Inspect `docker ps`, `docker compose ls`, `docker volume ls`, and occupied host ports before starting. The P02 inspection found port 5433 available and no collision with project `clu-store-api-local` or volume `clu-store-api-local_postgres_data`. Existing unrelated stopped containers and volumes were preserved.
@@ -164,3 +166,11 @@ The P08 suite creates two ordinary users, one ADMIN and orders through real P07 
 A narrowly scoped random `p08_fault_*` trigger/function/sequence injects a history failure after the conditional state update; cleanup removes those objects in finally. A separate concurrent demotion test holds the operator row and proves transaction-time role validation rejects a stale request-start ADMIN role. Test fixtures are deleted by exact IDs, and ten table counts must match their initial values. No reset/truncate, development test rows or unrelated Docker changes are used. See [P08 verification](p08-verification.md) for actual outputs.
 
 For manual development ADMIN access, use the existing explicit `admin:create` CLI with operator-provided credentials. P08 never seeds or silently creates a local administrator. JWT/database setup requirements from P05 still apply.
+
+## P09 documentation workflow
+
+After changing routes, Zod schemas, DTOs or examples, run `npm run docs:generate`, `npm run docs:check` and `npm run test:docs`, then the standard typecheck/lint/build checks. Generated JSON and the Postman guide are committed artifacts; validation fails if they are stale. Generation never reads private configuration into examples, never starts the API/database and never sends Postman requests. Its scanner reads private environment values only for blocked-value comparison.
+
+The official public Postman v2.1 schema is vendored under `tools/schemas` so validation works offline. Swagger UI uses a pinned production dependency with local assets. Validators are pinned development dependencies. No new environment settings, migrations, seed accounts or Docker changes are required.
+
+For the optional sensitive-original check, supply its existing external path with `npm run docs:check -- --original /absolute/private/path/Black_Apple_API.postman_collection.json`. Keep it external or in an ignored safe input directory; never copy it into tracked paths. The original is parsed as data and compared only for route shapes and forbidden value/origin matches. Neither its body/header contents nor matching private values are printed. [Maintenance](openapi-maintenance.md) and [verification](p09-verification.md) explain the limits and actual outcomes.

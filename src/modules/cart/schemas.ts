@@ -4,8 +4,8 @@ export const MAX_ITEM_QUANTITY = 99;
 export const MAX_CART_LINES = 50;
 export const MAX_CART_QUANTITY = 500;
 const id = z.number().int().positive().max(2147483647);
-const legacyText = z.string().max(2048);
-const legacyPrice = z.union([z.string().max(100), z.number().finite()]);
+const legacyText = z.string().max(2048).meta({ deprecated: true, description: 'Migration-only display field. Bounded, discarded and never used as authority.' });
+const legacyPrice = z.union([z.string().max(100), z.number().finite()]).meta({ deprecated: true, description: 'Migration-only untrusted client price. Discarded; live model base plus memory increment is authoritative.' });
 const legacyFields = ['name', 'imageSrc', 'model', 'modelPrice', 'memorySize', 'memorySizePrice'] as const;
 export const addItemRequest = z.object({ query: z.object({}).strict(), body: z.object({
   productId: id, modelId: id, memorySizeId: id,

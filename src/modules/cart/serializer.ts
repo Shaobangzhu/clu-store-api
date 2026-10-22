@@ -2,8 +2,10 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { serializeMoney } from '../../lib/money.js';
 import { localMedia } from '../products/schemas.js';
 import type { CartItemRecord, CartRecord } from './repository.js';
+import type { z } from 'zod';
+import type { cartItem, cart as cartDto } from '../../contracts/responses.js';
 
-export function serializeCartItem(item: CartItemRecord) {
+export function serializeCartItem(item: CartItemRecord): z.output<typeof cartItem> {
   // Reads display current catalog prices; the stored unitPrice is only an add-time cache.
   const unitPrice = item.model.price.plus(item.memorySize.extraPrice);
   return {
@@ -16,7 +18,7 @@ export function serializeCartItem(item: CartItemRecord) {
     available: item.product.inStock && item.model.inStock && item.memorySize.inStock && item.productColor.inStock,
   };
 }
-export function serializeCart(cart: CartRecord | null) {
+export function serializeCart(cart: CartRecord | null): z.output<typeof cartDto> {
   const items = cart?.items.map(serializeCartItem) ?? [];
   const totalAmount = items.reduce((sum, item) => sum.plus(item.lineTotal), new Prisma.Decimal(0));
   return { id: cart?.id ?? null, isDemo: false, currency: cart?.currency ?? 'CNY', items,

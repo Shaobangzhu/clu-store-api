@@ -1,3 +1,4 @@
+import { contractRoute } from '../../contracts/api.js';
 import { createHmac, randomBytes } from 'node:crypto';
 import { Router, type RequestHandler } from 'express';
 import { rateLimit } from 'express-rate-limit';
@@ -38,12 +39,12 @@ export function authRouter(service: AuthService | undefined, config: Env) {
     if (!service) throw new AppError(503, 'SERVICE_NOT_READY', 'Authentication is not configured');
     next();
   };
-  router.post('/register', ensureConfigured, validate(registerRequest), accountLimiter, async (_req, res) => {
+  contractRoute(router, 'register', ensureConfigured, validate(registerRequest), accountLimiter, async (_req, res) => {
     const { body } = res.locals.validated as z.output<typeof registerRequest>;
     const data = await service!.register(body);
     res.locals.success(data, 201, body.deprecatedConfirmation ? { deprecatedFields: ['ConfirmPassword'] } : null);
   });
-  router.post('/login', ensureConfigured, validate(loginRequest), accountLimiter, async (_req, res) => {
+  contractRoute(router, 'login', ensureConfigured, validate(loginRequest), accountLimiter, async (_req, res) => {
     const { body } = res.locals.validated as z.output<typeof loginRequest>;
     const data = await service!.login(body);
     res.locals.success(data, 200, body.deprecatedUsername ? { deprecatedFields: ['username'] } : null);
