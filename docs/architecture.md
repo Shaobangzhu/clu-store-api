@@ -1,6 +1,6 @@
 # CLU Store API — V1 architecture
 
-**Status:** P07 atomic checkout, P06 persistent user-owned carts, P05 auth and P04 public reads are implemented alongside the HTTP/database foundation and demo seed. Order retrieval/ADMIN transitions remain P08 work; this document also describes the V1 target.
+**Status:** P08 scoped order reads and ADMIN transitions, P07 atomic checkout, P06 persistent user-owned carts, P05 auth and P04 public reads are implemented alongside the HTTP/database foundation and demo seed. This document also describes remaining V1 work.
 
 ## Decisions
 
@@ -45,13 +45,13 @@ stateDiagram-v2
   rejected --> [*]
 ```
 
-P07 creates the pending order and initial history atomically. P08 must make each ADMIN decision and its history row atomic: a conditional transition from `pending` prevents two concurrent decisions from both succeeding; other transitions return `409 ORDER_INVALID_TRANSITION`. Placement replay always returns its saved creation receipt; fresh status belongs to P08 order reads.
+P07 creates the pending order and initial history atomically. P08 commits each ADMIN decision and its history row atomically: a conditional transition from `pending` prevents two concurrent decisions from both succeeding; other transitions return `409 ORDER_INVALID_TRANSITION`. Placement replay always returns its saved creation receipt; P08 order reads return fresh status.
 
 ## Security risk register
 
 | Risk | Required control / implementation gate |
 |---|---|
-| Unauthenticated or non-admin order decision | JWT authentication and server-side ADMIN role check on both transition routes; legacy `noauth` label is rejected as a contract source. |
+| Unauthenticated or non-admin order decision | P08 requires JWT and ADMIN guards, then rechecks the operator under a transaction share lock; legacy `noauth` is rejected. |
 | Cross-user cart/order access | Derive owner from authenticated subject; enforce ownership in database operations; return safe not-found behavior for inaccessible orders. |
 | Forged prices/configuration | Resolve model, memory, color and availability from database; calculate Decimal price server-side; ignore legacy client price/name fields. |
 | Password or token exposure | Argon2id hashes; strong environment-managed JWT key; redact authorization, cookies, passwords and secrets; never seed a known admin credential. |
@@ -62,6 +62,8 @@ P07 creates the pending order and initial history atomically. P08 must make each
 | Unknown commit outcome / omitted key | Keyed client retries recover the saved receipt; optional unkeyed direct checkout has no duplicate/replay guarantee. Unknown connection/commit errors are not blindly retried. |
 | Catalog mutation / stale cart price | Share-lock all selected SKU rows, validate current ownership/stock and use Decimal live model-plus-memory pricing. Snapshot descriptions/amounts persist independently of later edits. |
 | Out-of-band writes / metadata edits | Future writers must honor owner lock order and preserve snapshots/replay metadata. Database constraints alone do not enforce immutable history or application quantity caps. |
+| Competing ADMIN decisions / partial history | P08 conditional pending-only UPDATE and history insert in one transaction; PostgreSQL concurrency and injected history-failure tests verify one winner and rollback. |
+| Unbounded lists / metadata injection | Bounded keyset pagination; allowlisted note metadata, no arbitrary JSON or GET bodies; render notes as text. |
 | Database exposure | Compose-only service network; avoid public host binding; separate development/test databases; inject secrets at runtime. |
 | Historical marketing misrepresented as current | Historical 2025 offers inactive; do not copy legacy remote image URLs into data. |
 
@@ -101,4 +103,14 @@ Only known Prisma P2034 transaction conflicts are retried from the beginning, wi
 
 This is a cooperating row-lock protocol, **not PostgreSQL Serializable isolation or proof of global serializability**. Arbitrary SQL writers and future admin workflows must follow documented ordering/invariants. [PostgreSQL's Read Committed rules](https://www.postgresql.org/docs/18/transaction-iso.html) and [row-lock behavior](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS) inform the design. Actual concurrent requests, observed database lock waits, catalog update waits and injected PostgreSQL failures are recorded in [P07 verification](p07-verification.md).
 
-P08 must add owner/ADMIN order reads and atomic ADMIN transitions while preserving the creation receipt and item snapshots. P09/P12 must document/adapt the explicit receipt DTO and retain client idempotency keys across uncertain responses. Boolean availability is checked but not reserved; payment, stock counts, refunds and shipping remain outside V1.
+P08 adds owner/ADMIN reads and atomic ADMIN transitions while preserving the creation receipt and item snapshots. P09/P12 must document/adapt the explicit receipt DTO and retain client idempotency keys across uncertain responses. Boolean availability is checked but not reserved; payment, stock counts, refunds and shipping remain outside V1.
+
+## P08 order management boundary
+
+The order module now has management request schemas, service and repository alongside P07 checkout. Shared explicit item serialization preserves the placement contract; current-state DTOs additionally expose owner UUID, updatedAt and bounded history metadata. They never load account relations or raw checkout metadata. Routes use the existing current-role authentication and ADMIN guard. USER detail queries include owner identity in SQL; the own list remains scoped even for ADMIN.
+
+Detail and list loads use Repeatable Read transactions and sequential batched child queries. Lists use a strict `(createdAt,id)` cursor and allowlisted newest/oldest ordering, capped at 100 orders. The existing owner/time/ID index handles private lists; the additive `20261021000000_order_list_index` migration supports global ADMIN lists. Pagination does not scan skipped offsets or require counting all orders. Each page is a separate snapshot, not a traversal-wide snapshot or a load-performance guarantee.
+
+Decisions use Read Committed. Lock order is operator User `FOR SHARE`, then the conditional order UPDATE; the operator role is rechecked while locked. Unlike an exclusive operator lock, share locks permit same-ADMIN concurrent actions to exercise the order predicate. PostgreSQL rechecks the pending predicate after a competing update commits. The winner records its terminal history with authenticated operator and the exact PostgreSQL updatedAt timestamp. The loser returns 409; missing IDs return 404. A history insert failure rolls back status/updatedAt. No item, total, currency, key, fingerprint or order receipt metadata is rewritten.
+
+P08 does not automatically retry decisions, call external services, create payment URIs or add reverse transitions. Request-start role freshness remains the policy for reads; mutations additionally hold the operator lock through commit. Direct database writes remain outside the lifecycle guarantee. The relevant PostgreSQL mechanisms are documented in [Read Committed update behavior](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-READ-COMMITTED) and [row locking](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS). Actual observations are in [P08 verification](p08-verification.md).

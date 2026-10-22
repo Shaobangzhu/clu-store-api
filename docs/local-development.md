@@ -1,6 +1,6 @@
 # Local development
 
-Local development uses the installed Docker engine with a dedicated PostgreSQL 18 Compose project. P04–P07 provide public reads, auth, carts and transactional checkout. Node 24 and npm 11 are required.
+Local development uses the installed Docker engine with a dedicated PostgreSQL 18 Compose project. P04–P08 provide public reads, auth, carts, transactional checkout, scoped order reads and ADMIN decisions. Node 24 and npm 11 are required.
 
 ## First setup
 
@@ -142,3 +142,25 @@ npm run build
 Checkout tests use real committed PostgreSQL transactions and Promise.all HTTP requests. They generate test identities/options, observe lock waits through `pg_stat_activity`, test simultaneous keys/cart writes/catalog updates and assert exact snapshot totals/replays. Fault tests create narrowly scoped, randomly named test-only triggers/functions/sequences that fail history insertion or cart deletion **after partial order writes exist**. SQLSTATE 23514 checks rollback without retry; 40001/40P01 exercise the actual Prisma adapter/retry path. These faults are injected database exceptions, not claims that PostgreSQL naturally selected a deadlock victim in that case. No production fault hook or database mock is used.
 
 The test URL and connected role/database guards run before DDL or data mutation. Fault objects are removed in finally; test cleanup deletes only exact allocated order/history/item/user/catalog IDs. Counts of ten affected tables must match their pre-suite values afterward. No reset, truncate, development mutation or unrelated container/volume deletion is performed. A force-killed run may leave its own `p07_fault_*` objects or test fixtures; inspect exact ownership before manual removal, never reset shared data. Sequence counters may advance after rollback. See [P07 verification](p07-verification.md) for actual commands/results and the [checkout contract](api-contract.md#p07-checkout) for client retries.
+
+## P08 order management verification
+
+P08 adds one reviewed B-tree index migration for global order pagination. It is additive and preserves the initial migration's custom constraints. Apply it to the selected local development database with `npm run db:migrate:dev`; stop if drift/reset is requested. The guarded `db:migrate:test` applies it separately to the test database. No new environment settings, dependencies, seed data or development administrator are required.
+
+```sh
+npm run db:generate
+npm run db:migrate:dev
+npm run db:migrate:test
+npm run test:integration -- tests/integration/orders-management.test.ts
+npm run test:integration
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+The P08 suite creates two ordinary users, one ADMIN and orders through real P07 checkout using generated credentials in the guarded test database. It verifies scoped snapshot/history reads, both list sorts and cursor boundaries, metadata normalization, all authorization/state errors and opposite decisions launched with Promise.all. A separate connection holds the order lock until both UPDATE waiters are observed in PostgreSQL. The assertions re-query stored status/history/operator after the race.
+
+A narrowly scoped random `p08_fault_*` trigger/function/sequence injects a history failure after the conditional state update; cleanup removes those objects in finally. A separate concurrent demotion test holds the operator row and proves transaction-time role validation rejects a stale request-start ADMIN role. Test fixtures are deleted by exact IDs, and ten table counts must match their initial values. No reset/truncate, development test rows or unrelated Docker changes are used. See [P08 verification](p08-verification.md) for actual outputs.
+
+For manual development ADMIN access, use the existing explicit `admin:create` CLI with operator-provided credentials. P08 never seeds or silently creates a local administrator. JWT/database setup requirements from P05 still apply.

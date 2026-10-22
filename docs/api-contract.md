@@ -1,6 +1,6 @@
 # CLU Store API — V1 contract
 
-**Status:** P07 implements atomic checkout alongside P06 carts, P05 auth, P04 public reads and `/health`/`/ready`. Order retrieval/ADMIN transitions and documentation UI routes remain future V1 work.
+**Status:** P08 implements scoped order reads and ADMIN transitions alongside P07 checkout, P06 carts, P05 auth, P04 public reads and `/health`/`/ready`. Documentation UI remains future work.
 
 ## Response and money rules
 
@@ -40,7 +40,7 @@ The original paths remain callable in V1, but the new envelope and validation ru
 
 ### New V1 routes
 
-`GET /api/categories` (public navigation summaries); `GET /api/orders` (paginated own orders); `GET /api/admin/orders` (ADMIN paginated/searchable orders); `GET /health` (liveness); `GET /ready` (database readiness); `GET /docs` (OpenAPI UI).
+`GET /api/categories` (public navigation summaries); `GET /api/orders` (paginated own orders); `GET /api/admin/orders` (ADMIN paginated all orders; search/filtering is not implemented in P08); `GET /health` (liveness); `GET /ready` (database readiness); `GET /docs` (planned OpenAPI UI).
 
 ### Compatibility and deprecation map
 
@@ -52,8 +52,8 @@ The original paths remain callable in V1, but the new envelope and validation ru
 | Registration `ConfirmPassword` casing | Accept as deprecated casing alias for `confirmPassword`; email is required. No-email legacy registration is rejected. |
 | Cart/order client-supplied name or price | Ignore and never use as authority. Server loads product/options and computes price. |
 | `approve` marked `noauth` in old collection | Rejected. Both transitions require authenticated ADMIN. |
-| Arbitrary legacy transition metadata | Only accept validated structured metadata if retained; it cannot alter authorization or state rules. Exact schema remains unspecified. |
-| GET order request body in old collection | No body contract. Clients must not depend on it; ignore or reject according to HTTP parsing policy. |
+| Arbitrary legacy transition metadata | P08 accepts only `{note:string}` or a deprecated bounded string normalized to `{note:string}`. It cannot alter authorization/state and is never parsed as instructions or arbitrary JSON. |
+| GET order request body in old collection | P08 rejects parsed bodies and unparsed payloads; GET order routes have no body contract. |
 | Legacy direct single-item checkout body | Supported in P07 with canonical SKU identifiers/quantity. Validate live configuration, discard accepted legacy display/prices and leave the cart unchanged. Unknown fields are rejected. |
 | Legacy image URLs / old support HTML | Do not copy blindly; replace only with reviewed/local assets and sanitized content. |
 
@@ -148,7 +148,7 @@ Tokens are signed with JOSE HS256 only, with protected header `typ:JWT`. The onl
 
 Issuer and audience are validated against `JWT_ISSUER` (default `clu-store-api`) and `JWT_AUDIENCE` (default `clu-store-client`). Each token has UUID `sub`, UUID `jti`, `iat` and finite `exp`; default TTL is 900 seconds, configurable 60–3600. Verification requires issuer/audience/subject/issued-at/expiration, a valid UUID subject, integer times, positive lifetime no longer than configured TTL and no future issuance. Clock tolerance is zero; hosts need synchronized clocks. Tokens contain no role, email or password data.
 
-`requireAuth(service)` accepts only the Authorization Bearer header (maximum 4096 characters), verifies the token, then fetches a safe user projection by subject from PostgreSQL. A deleted user is denied. `requireRole('ADMIN')` checks the freshly fetched role; an embedded token role claim is ignored. Role freshness is one database read at the start of every protected request; it is not a guarantee against a role change midway through that request. Future admin mutations must consider their transaction boundary.
+`requireAuth(service)` accepts only the Authorization Bearer header (maximum 4096 characters), verifies the token, then fetches a safe user projection by subject from PostgreSQL. A deleted user is denied. `requireRole('ADMIN')` checks the freshly fetched role; an embedded token role claim is ignored. Read authorization uses that request-start role. P08 decisions additionally recheck the role under a User share lock inside their transaction, preventing a concurrent demotion/deletion from crossing the authorized mutation.
 
 This is a single-service demo access-token design: no refresh tokens, logout/revocation list, MFA, email verification, password recovery/change, key rotation overlap or multi-service key distribution. A stolen bearer token works until expiry unless its user is deleted or the signing key changes. Password changes made out of band do not revoke existing tokens. HS256 verification requires the signing secret, so any verifier can mint tokens. Use TLS before network exposure; the frontend should manage token storage and XSS risk deliberately. P06 must mount the reusable guard and derive ownership from `res.locals.user.id`.
 
@@ -273,3 +273,51 @@ The lock protocol is shared with all P06 mutations. The per-user unique key inde
 | 500 `INTERNAL_ERROR` | Other database/internal failure; no SQL or exception detail exposed |
 
 Validation or transaction failures preserve the cart and do not leave partial orders/history. V1 checks boolean availability only; it has no stock counts, reservations, payment side effects or shipping workflow. See [transaction design](architecture.md#p07-checkout-boundary) and [real PostgreSQL verification](p07-verification.md).
+
+## P08 order reads and decisions
+
+### Authorization and current-state DTO
+
+All five routes require Bearer authentication and return `Cache-Control: no-store`. Detail, lists and successful decisions return 200 with the standard envelope. IDs must be positive PostgreSQL Int32 decimal integers, without signs, fractions or leading zeros. GET bodies are rejected; detail and decision routes accept no query parameters.
+
+| Route | Scope |
+|---|---|
+| `GET /api/orders/:id` | Owner or ADMIN. Foreign USER and missing IDs both return `404 ORDER_NOT_FOUND`, message `Order not found`. |
+| `GET /api/orders` | The authenticated owner's orders only, even for ADMIN. No client owner filter. |
+| `GET /api/admin/orders` | ADMIN only, across all owners. |
+| `POST /api/orders/:id/approve` | ADMIN only; pending to approved. |
+| `POST /api/orders/:id/reject` | ADMIN only; pending to rejected. |
+
+The current-state `data` object is `{id,userId,status,currency,totalAmount,createdAt,updatedAt,items,statusHistory}`. `userId` is the owner UUID, useful for ADMIN lists; no associated User object is loaded. Items retain the P07 snapshot fields: `{id,productId,productName,modelName,modelSpecification,memoryName,color,qty,unitPrice,lineTotal}`. Historical nullable product references remain null. Amounts are fixed two-decimal strings and dates are UTC ISO timestamps. Items sort by ascending ID. Live catalog names, availability and prices are never substituted for purchase snapshots.
+
+History entries are `{id,fromStatus,toStatus,operatorId,createdAt,metadata}` ordered by `createdAt ASC,id ASC`. The initial entry has null fromStatus, pending toStatus and purchaser UUID; a terminal entry has pending fromStatus, approved/rejected toStatus and the authenticated ADMIN UUID. Metadata is either the validated plain `{note}` object or null; unsupported out-of-band metadata shapes are not exposed. Notes are owner-visible, so operators must not put secrets or private operational data in them. Clients must render notes as text, never HTML.
+
+Responses exclude passwords/hashes, email/username profiles, JWT claims/tokens, idempotency keys/fingerprints and raw `Order.metadata`. P07's placement receipt remains unchanged and continues to replay its original pending state. Use these GET routes to obtain current status. Detail/decision responses normally have `meta:null`.
+
+### List sorting and pagination
+
+Both lists accept only `pageSize`, `sort`, and `cursor`. `pageSize` is a plain positive decimal integer, default 20, maximum 100. `sort` defaults to `newest` (`createdAt DESC,id DESC`); `oldest` uses both ascending. Timestamp ties use the ID in the same direction, making the ordering deterministic.
+
+An optional opaque `cursor` is at most 256 base64url characters and encodes a strictly validated version-1 timestamp/ID/sort tuple. Pass the returned `nextCursor` with the same sort for the next page. Invalid/repeated/unknown query values or a cursor/sort mismatch return `400 VALIDATION_ERROR`. Cursors are positions, not credentials; owner filtering is applied independently on every query, including if a user supplies another list's cursor.
+
+List success uses `data:[<current-state DTO>,...]` and `meta:{pageSize,sort,hasMore,nextCursor}`. `nextCursor` is null at the end, including empty lists. A valid position beyond the end returns an empty array. There are no offsets, page numbers, total counts, keyword searches or status filters in P08. This is a deliberate order-list contract; product-list pagination remains unchanged.
+
+The query fetches at most pageSize+1 heads with a parameterized `(createdAt,id)` tuple comparison, using the existing `(userId,createdAt,id)` owner index and the new `(createdAt,id)` global index. It batches item/history reads sequentially within one Repeatable Read transaction, so each response's current state and history share a database snapshot. Pages are separate snapshots: newly inserted orders may require restarting from the first page; cursors do not freeze an entire traversal.
+
+### Decision body and legacy normalization
+
+The body may be omitted, `{}`, or `{metadata:{note:"Reviewed"}}`. A note has at most 1000 raw JavaScript string code units, is trimmed, then must have 1–500 code units without control characters. The only accepted structured metadata key is `note`. Empty strings, null, arrays, nested objects and unknown properties fail validation. Nonempty non-JSON payloads are rejected rather than silently ignored.
+
+Legacy `{metadata:"Reviewed"}` becomes `{note:"Reviewed"}` under the same limits and returns `meta:{deprecatedFields:["metadata"]}`. JSON-looking strings remain literal note text and are never parsed. Client operator IDs, statuses, timestamps, totals, shipping/payment properties and arbitrary metadata keys are rejected. The route determines the terminal state, authentication determines the operator, and PostgreSQL determines the timestamp. Notes never modify `Order.metadata` or P07's receipt.
+
+### Transaction, races and failures
+
+Each decision first passes `requireAuth` and `requireRole('ADMIN')`. One Read Committed transaction then share-locks the operator User row and checks its current role. A missing operator returns 401; a demoted operator returns 403. Compatible share locks allow two requests by the same ADMIN to compete at the order update rather than being serialized by an application mutex.
+
+The state write is one conditional `UPDATE ... WHERE id = :id AND status = 'pending' RETURNING updatedAt`. It changes only status/updatedAt. A winner inserts history with fromStatus pending, the route's target status, authenticated operator, bounded metadata and that returned timestamp. Both writes and the response snapshot commit together. A history failure rolls back the status and updatedAt. Missing IDs return 404; a terminal order returns `409 ORDER_INVALID_TRANSITION`, message `Order is no longer pending`.
+
+For competing valid decisions that complete without infrastructure failure, one returns 200 and one 409, with exactly one terminal history entry. Same-action retries, opposite-action retries, and all terminal-to-anything transitions return 409. No `unapprove` route exists. No payment gateway, inventory action or fake `paymentUri` is implemented.
+
+Transactions retain the 5-second acquisition and 10-second execution limits plus configured database timeouts. Decision failures are not automatically retried: unexpected database/timeout failures return sanitized 500; missing dependencies return 503. After an uncertain network outcome, read the current order/history; a repeated action will not insert another transition. SQL history-edge checks complement the application predicate; arbitrary direct SQL writers can still violate application lifecycle rules.
+
+See [P08 architecture](architecture.md#p08-order-management-boundary) and [verification](p08-verification.md) for observed PostgreSQL races and rollback results.

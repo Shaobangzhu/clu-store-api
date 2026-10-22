@@ -1,6 +1,6 @@
 # CLU Store API
 
-P07 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads, registration/login, JWT guards, persistent user-owned carts and atomic checkout are implemented. Order retrieval and ADMIN decisions arrive in P08.
+P08 provides an Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads, registration/login, JWT guards, persistent user-owned carts, atomic checkout, scoped order reads and ADMIN decisions are implemented.
 
 ## Local development
 
@@ -68,7 +68,7 @@ All JSON responses use the documented envelope. Monetary DTO values are two-deci
 
 Configure `JWT_SECRET` as 32 cryptographically random bytes encoded as 64 hex characters, plus `JWT_ISSUER`, `JWT_AUDIENCE` and `JWT_TTL_SECONDS` (default 900). `env:local` supplies a random key for **new** `.env` files; existing files are preserved and need the new key added explicitly. Missing secret disables authentication with 503 in development/test and rejects production startup. Invalid supplied secrets always reject startup.
 
-Argon2id hashes use 64 MiB, three passes and one lane. Auth limits apply per IP before JSON parsing and per normalized identifier; passwords, hashes, bodies and headers are excluded/redacted in logs. Reusable `requireAuth` loads the current database user/role on every protected request, and `requireRole('ADMIN')` checks that role. Private cart routes and checkout use authentication; ADMIN order decisions arrive in P08.
+Argon2id hashes use 64 MiB, three passes and one lane. Auth limits apply per IP before JSON parsing and per normalized identifier; passwords, hashes, bodies and headers are excluded/redacted in logs. Reusable `requireAuth` loads the current database user/role on every protected request, and `requireRole('ADMIN')` checks that role. Private cart/order routes use authentication; ADMIN decisions also recheck and share-lock the operator's role inside their transaction.
 
 Provision an administrator explicitly with `npm run admin:create`, operator-provided JSON credentials on stdin and `ADMIN_DATABASE_NAME` matching the chosen database. This CLI only creates accounts and never overwrites or promotes an existing user. See [auth contract](docs/api-contract.md#p05-authentication), [local setup and CLI](docs/local-development.md#p05-authentication-setup), and [verification/security limits](docs/p05-verification.md).
 
@@ -89,4 +89,17 @@ The local frontend still uses its reducer/localStorage cart. Its API integration
 
 One PostgreSQL Read Committed transaction locks the owner and selected rows, checks a replay before the cart, validates live options/stock, calculates Decimal model-plus-memory prices, saves pending order/item/history snapshots and consumes purchased cart lines. The existing per-user key constraint prevents duplicates; recognized serialization/deadlock conflicts retry the entire transaction at most three times. This is explicit row locking, not database-wide Serializable isolation. No inventory reservation or payment processing is implied.
 
-See [checkout contract](docs/api-contract.md#p07-checkout), [transaction design](docs/architecture.md#p07-checkout-boundary) and [actual PostgreSQL verification](docs/p07-verification.md). No schema or dependency changes are required. P08 must preserve snapshots and saved replay metadata while adding owned order reads and ADMIN transitions.
+See [checkout contract](docs/api-contract.md#p07-checkout), [transaction design](docs/architecture.md#p07-checkout-boundary) and [actual PostgreSQL verification](docs/p07-verification.md). P07 required no schema or dependency changes. P08 preserves its snapshots and saved replay metadata.
+
+## Order reads and decisions (P08)
+
+- `GET /api/orders/:id`: owner or ADMIN; other users receive the same 404 as a missing order.
+- `GET /api/orders`: only the caller's orders, including when the caller is ADMIN.
+- `GET /api/admin/orders`: ADMIN-only list across owners.
+- `POST /api/orders/:id/approve` and `/reject`: ADMIN-only, pending orders only. Repeated or competing terminal decisions return 409.
+
+Lists accept `pageSize` (default 20, max 100), `sort` (`newest`/`oldest`) and an opaque `cursor`. They use indexed `(createdAt,id)` keyset pagination and return `meta:{pageSize,sort,hasMore,nextCursor}`. Order DTOs contain stored item snapshots and ordered status history, with Decimal money strings; no account records, password hashes, JWT claims or internal checkout metadata are exposed.
+
+Decision bodies may be omitted or `{}`; optional canonical metadata is `{metadata:{note:"Reviewed"}}`. A bounded legacy string becomes a plain note and is marked deprecated. Status update and history insert commit in one PostgreSQL transaction. No payments, payment URI or reverse transitions are implemented.
+
+P08 adds one reviewed pagination index migration. Apply it locally with `npm run db:migrate:dev`; never accept a reset. See [P08 contract](docs/api-contract.md#p08-order-reads-and-decisions) and [verification](docs/p08-verification.md).
