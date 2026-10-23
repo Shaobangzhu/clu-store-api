@@ -13,6 +13,7 @@ import { hashPassword } from '../../src/modules/auth/password.js';
 import { testDatabaseUrl, assertTestConnection } from '../../scripts/test-database-guard.js';
 import { createCartFixture, type CartFixture } from '../helpers/cart-fixture.js';
 import { installCheckoutFault } from '../helpers/checkout-fault.js';
+import { expectError } from '../helpers/expect-error.js';
 
 const config = parseEnv({ NODE_ENV: 'test', LOG_LEVEL: 'silent', JWT_SECRET: randomBytes(32).toString('hex') });
 const tokens = createTokens(config);
@@ -84,6 +85,28 @@ async function withFault(stage: 'history' | 'delete', sqlstate: '23514' | '40001
 }
 
 describe('P07 real PostgreSQL checkout', () => {
+  it.each([400, 401, 403, 404, 409, 422, 429])('returns the exact stable %i envelope through mounted routes', async (status) => {
+    if (status === 400) {
+      expectError(await place('bad key'), 400, 'VALIDATION_ERROR', 'Invalid Idempotency-Key header');
+    } else if (status === 401) {
+      expectError(await request(app).post('/api/orders/place').send({}), 401, 'UNAUTHORIZED', 'Authentication failed');
+    } else if (status === 403) {
+      expectError(await request(app).get('/api/admin/orders').set('Authorization', `Bearer ${token}`), 403, 'FORBIDDEN', 'Access denied');
+    } else if (status === 404) {
+      expectError(await request(app).get('/api/orders/2147483647').set('Authorization', `Bearer ${token}`), 404, 'ORDER_NOT_FOUND', 'Order not found');
+    } else if (status === 409) {
+      expect((await place('envelope-conflict', f().input)).status).toBe(201);
+      expectError(await place('envelope-conflict', { ...f().input, qty: 2 }), 409, 'IDEMPOTENCY_CONFLICT', 'Idempotency key was used for a different checkout request');
+    } else if (status === 422) {
+      expectError(await place(), 422, 'EMPTY_CART', 'Cart is empty');
+    } else {
+      const limited = createApp({ ...config, RATE_LIMIT_MAX: 1 }, undefined, database.check);
+      expect((await request(limited).get('/health')).status).toBe(200);
+      const response = await request(limited).get('/health');
+      expectError(response, 429, 'RATE_LIMITED', 'Too many requests');
+      expect(response.headers['retry-after']).toMatch(/^\d+$/);
+    }
+  });
   it('atomically prices, snapshots, records pending history and clears only the owner cart', async () => {
     expect((await add({ qty: 2 })).status).toBe(201);
     expect((await add({ modelId: f().secondModel.id, memorySizeId: f().secondMemory.id, color: 'Black', qty: 3 })).status).toBe(201);
@@ -291,7 +314,7 @@ describe('P07 real PostgreSQL checkout', () => {
     const before = (await cart()).body;
     await withFault(stage, '23514', 100, async (fault) => {
       const response = await place('rollback');
-      expect(response.status).toBe(500); expect(response.body.error.code).toBe('INTERNAL_ERROR');
+      expectError(response, 500, 'INTERNAL_ERROR', 'Internal server error');
       expect(response.text).not.toMatch(/private|23514|p07_fault|Prisma/);
       expect(await fault.attempts()).toBe(1);
       expect(await orderCount()).toBe(0);

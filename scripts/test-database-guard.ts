@@ -1,6 +1,7 @@
 import type { Client } from 'pg';
 
 export function testDatabaseUrl(environment: NodeJS.ProcessEnv): string {
+  if (environment.NODE_ENV === 'production') throw new Error('Refusing test database access in production mode');
   const test = environment.TEST_DATABASE_URL;
   const dev = environment.DATABASE_URL;
   if (!test || !dev) throw new Error('Both DATABASE_URL and TEST_DATABASE_URL are required');
@@ -27,13 +28,13 @@ export function testDatabaseUrl(environment: NodeJS.ProcessEnv): string {
 }
 
 export async function assertTestConnection(client: Client): Promise<void> {
-  const result = await client.query<{ database: string; role: string; rolsuper: boolean; rolcreatedb: boolean; rolcreaterole: boolean }>(`
-    SELECT current_database() AS database, current_user AS role, rolsuper, rolcreatedb, rolcreaterole
+  const result = await client.query<{ database: string; role: string; rolsuper: boolean; rolcreatedb: boolean; rolcreaterole: boolean; rolreplication: boolean; rolbypassrls: boolean }>(`
+    SELECT current_database() AS database, current_user AS role, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls
     FROM pg_roles WHERE rolname = current_user
   `);
   const row = result.rows[0];
   if (!row || row.database !== 'clu_store_test' || row.role !== 'clu_test'
-    || row.rolsuper || row.rolcreatedb || row.rolcreaterole) {
+    || row.rolsuper || row.rolcreatedb || row.rolcreaterole || row.rolreplication || row.rolbypassrls) {
     throw new Error('Refusing test database access: actual database/role is unsafe');
   }
 }

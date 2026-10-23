@@ -1,0 +1,35 @@
+name: API quality gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COMPOSE_PROJECT_NAME: clu-store-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      # Fresh hosted runner only. Random private credentials; refuses to replace .env.
+      - run: npm run env:local
+      - run: docker compose up -d --wait postgres
+      - run: npm run db:migrate:test
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      # This project/volume belongs only to this hosted job, never a developer project.
+      - if: always()
+        run: docker compose down --volumes

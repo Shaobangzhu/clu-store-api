@@ -42,7 +42,7 @@ The development and test roles are separate non-superusers. The development role
 
 `db:migrate:test` and `db:smoke` validate `TEST_DATABASE_URL` before connecting: local hostname only, exact database `clu_store_test`, exact role `clu_test`, no query/hash options, and a database name different from `DATABASE_URL` even through host aliases. After connection, they check the actual database and role privileges. Test migration uses only `migrate deploy`, never `migrate dev` or reset. The smoke script proves that test credentials cannot connect to `clu_store_dev`.
 
-`db:smoke` inserts synthetic integrity probes inside a transaction and always rolls them back. It does not seed or delete existing data and provides no reset command. PostgreSQL sequence counters may advance despite rollback; IDs are opaque and need not be contiguous. Unit/HTTP tests (`npm test`) do not load `.env` or connect to a database. Future integration suites must reuse these guards before any test data mutation.
+`db:smoke` inserts synthetic integrity probes inside a transaction and always rolls them back. It does not seed or delete existing data and provides no reset command. PostgreSQL sequence counters may advance despite rollback; IDs are opaque and need not be contiguous. `npm run test:unit` does not require PostgreSQL. P10 makes `npm test` include the PostgreSQL suites; their global setup loads an optional private `.env`, validates the connection and holds a session advisory lock until cleanup finishes. See [testing](testing.md).
 
 ## Migration workflow
 
@@ -76,7 +76,7 @@ All six response JSON files are now reconciled. This is labeled sample/demo data
 
 ## P04 public read verification
 
-Run `npm run db:migrate:test` followed by `npm run test:integration` after the database is healthy. This suite requires both database URLs, validates the actual test role/database, creates synthetic catalog/content fixtures inside individual Repeatable Read transactions and intentionally rolls each one back. A final count check confirms that category/product/configuration/marketing/support counts are unchanged. No test resets or seeds the development database. Default `npm test` excludes the integration directory explicitly; both suites are required for a full P04 check.
+Run `npm run db:migrate:test` followed by `npm run test:integration` after the database is healthy. This suite requires both database URLs, validates the actual test role/database, creates synthetic catalog/content fixtures inside individual Repeatable Read transactions and intentionally rolls each one back. A final count check confirms that category/product/configuration/marketing/support counts are unchanged. No test resets or seeds the development database. Since P10, default `npm test` includes both unit and integration projects. Use `npm run test:unit` for the fast subset.
 
 The runtime injects one Prisma client through the catalog read adapter. Product count/page/configuration reads share a snapshot; controllers have no direct database calls. `/media/demo-placeholder.svg` now serves the existing reviewed asset. See [p04-verification.md](p04-verification.md).
 
@@ -108,7 +108,7 @@ npm run build
 
 The auth suite generates a fresh signing key/password per run, creates uniquely named test users and performs real concurrent inserts. Its finalizer deletes only the exact usernames allocated by that run and asserts the user count equals the initial count. CLI verification creates an admin only in the test database and removes it afterward. It never resets/truncates the database or touches development accounts. Catalog fixtures still roll back. A force-killed test process can leave its prefixed test users; inspect those identities explicitly rather than resetting shared data.
 
-`npm test` includes configuration, Pino redaction, malformed-JSON rate limiting and bounded-password-work checks without a database. Supertest still needs permission to bind localhost. See [P05 verification](p05-verification.md) for actual command outcomes and [the auth contract](api-contract.md#p05-authentication) for token/lifecycle limitations.
+`npm run test:unit` includes configuration, Pino redaction, malformed-JSON rate limiting and bounded-password-work checks without a database. Supertest still needs permission to bind localhost. See [P05 verification](p05-verification.md) for actual command outcomes and [the auth contract](api-contract.md#p05-authentication) for token/lifecycle limitations.
 
 
 ## P06 cart verification and integration

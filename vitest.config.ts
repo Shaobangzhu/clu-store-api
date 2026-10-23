@@ -1,3 +1,7 @@
-import { defineConfig, configDefaults } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 
-export default defineConfig({ test: { exclude: [...configDefaults.exclude, 'tests/integration/**'] } });
+// The default quality gate includes PostgreSQL; missing infrastructure is a failure.
+export default defineConfig({ test: {
+  projects: ['vitest.unit.config.ts', 'vitest.integration.config.ts'],
+  fileParallelism: false,
+} });

@@ -279,6 +279,7 @@ describe('P06 persistent owned carts against PostgreSQL', () => {
     ['overflow id', { memorySizeId: 2147483648 }], ['empty color', { color: '' }], ['control color', { color: 'Silver\n' }],
     ['long color', { color: 'x'.repeat(101) }], ['extra owner', { userId: 'someone-else' }], ['extra currency', { currency: 'USD' }],
     ['object legacy price', { modelPrice: { amount: 1 } }],
+    ['client unit price', { unitPrice: '0.01' }], ['client total', { totalAmount: '0.01' }],
   ])('rejects invalid payload: %s', async (_label, input) => {
     const response = await add(input);
     expect(response.status).toBe(400);

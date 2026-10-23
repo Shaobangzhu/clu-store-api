@@ -73,6 +73,9 @@ describe('test database protection', () => {
     expect(() => testDatabaseUrl({ DATABASE_URL: dev })).toThrow();
     expect(() => testDatabaseUrl({ TEST_DATABASE_URL: test })).toThrow();
   });
+  it('refuses production mode even for an otherwise valid local test URL', () => {
+    expect(() => testDatabaseUrl({ NODE_ENV: 'production', DATABASE_URL: dev, TEST_DATABASE_URL: test })).toThrow('production');
+  });
 });
 
 it('serializes Decimal money as fixed-scale strings without floating point arithmetic', () => {

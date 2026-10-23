@@ -13,6 +13,7 @@ import { hashPassword } from '../../src/modules/auth/password.js';
 import { testDatabaseUrl, assertTestConnection } from '../../scripts/test-database-guard.js';
 import { createCartFixture, type CartFixture } from '../helpers/cart-fixture.js';
 import { installDecisionFault } from '../helpers/order-decision-fault.js';
+import { expectError } from '../helpers/expect-error.js';
 
 const config = parseEnv({ NODE_ENV: 'test', LOG_LEVEL: 'silent', JWT_SECRET: randomBytes(32).toString('hex') });
 const tokens = createTokens(config);
@@ -232,7 +233,7 @@ describe('P08 real PostgreSQL order reads and ADMIN decisions', () => {
     const fault = await installDecisionFault(control, firstOrder);
     try {
       const response = await decide(firstOrder, 'approve');
-      expect(response.status).toBe(500); expect(response.body.error.code).toBe('INTERNAL_ERROR');
+      expectError(response, 500, 'INTERNAL_ERROR', 'Internal server error');
       expect(response.text).not.toMatch(/private|23514|Prisma|p08_fault/); expect(await fault.called()).toBe(true);
       expect(await database.client.order.findUniqueOrThrow({ where: { id: firstOrder } })).toEqual(before);
       expect(await history()).toHaveLength(1);
