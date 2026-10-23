@@ -1,5 +1,50 @@
 name: clu-store-api-local
 services:
+  api:
+    build:
+      context: .
+      target: runtime
+    init: true
+    environment: &api_environment
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgresql://clu_dev:${CLU_DEV_PASSWORD:?Set development role password}@postgres:5432/clu_store_dev
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_ISSUER: ${JWT_ISSUER:-clu-store-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-clu-store-client}
+      JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-900}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      JSON_BODY_LIMIT_BYTES: ${JSON_BODY_LIMIT_BYTES:-102400}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}
+      AUTH_IDENTIFIER_RATE_LIMIT_MAX: ${AUTH_IDENTIFIER_RATE_LIMIT_MAX:-5}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-900000}
+      DB_CHECK_TIMEOUT_MS: ${DB_CHECK_TIMEOUT_MS:-2000}
+      SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:-10000}
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_HOST_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 70s
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+  migrate:
+    profiles: [tools]
+    build:
+      context: .
+      target: tools
+    environment: *api_environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
   postgres:
     image: postgres:18
     environment:

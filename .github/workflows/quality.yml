@@ -30,6 +30,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: docker compose build
+      - run: docker compose --profile tools run --rm migrate
+      - run: docker compose up --build -d --wait
+      - run: |
+          curl --fail --silent --show-error http://127.0.0.1:3000/health
+          curl --fail --silent --show-error http://127.0.0.1:3000/ready
       # This project/volume belongs only to this hosted job, never a developer project.
       - if: always()
         run: docker compose down --volumes

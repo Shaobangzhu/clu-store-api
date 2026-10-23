@@ -1,6 +1,6 @@
 # CLU Store API
 
-P10 adds a PostgreSQL quality gate to the Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads, registration/login, JWT guards, persistent user-owned carts, atomic checkout, scoped order reads, ADMIN decisions and generated OpenAPI/Postman documentation are implemented.
+P11 packages the Express 5 / strict TypeScript / ESM API foundation for Node 24 LTS, with Prisma 7, local PostgreSQL 18 and a provenance-backed response-sample and supplemental frontend demo seed. Public catalog/category/support reads, registration/login, JWT guards, persistent user-owned carts, atomic checkout, scoped order reads, ADMIN decisions and generated OpenAPI/Postman documentation are implemented.
 
 ## Local development
 
@@ -16,7 +16,7 @@ npm run db:seed
 npm run dev
 ```
 
-The default bind address is `127.0.0.1:3000`. Configure `HOST` explicitly for container access later. `env:local` generates private credentials into a new ignored `.env` and refuses to overwrite existing settings. See `.env.example` for validated configuration; `CORS_ORIGINS` accepts comma-separated exact HTTP(S) origins, and an empty value permits no browser cross-origin access. Requests without an Origin header are accepted.
+The default bind address is `127.0.0.1:3000`. Compose sets container `HOST=0.0.0.0`; published API access defaults to loopback. `env:local` generates private credentials into a new ignored `.env` and refuses to overwrite existing settings. See `.env.example` for validated configuration; `CORS_ORIGINS` accepts comma-separated exact HTTP(S) origins, and an empty value permits no browser cross-origin access. Requests without an Origin header are accepted.
 
 ```sh
 npm run db:migrate:test
@@ -122,3 +122,18 @@ Routers take their methods/paths from `src/contracts/api.ts`, referencing the ex
 Run `npm run lint`, `npm run typecheck`, `npm test`, then `npm run build` with the local test database available. The default test command includes real transaction/concurrency checks, all historical paths and both cart aliases. A separate contract test inspects actual Express registrations against the checked-in OpenAPI spec.
 
 [Quality-gate coverage and verification](docs/p10-verification.md) maps the roadmap requirements to executable tests and records results. [Test setup and CI](docs/testing.md) explains isolation, targeted commands and the GitHub Actions workflow. No production container/deployment is added by P10.
+
+## Containers and self-hosting (P11)
+
+The multi-stage Node 24 image generates the pinned Prisma 7 client, compiles TypeScript and runs as a non-root user with production dependencies. Compose supports `api` and `postgres`, persistent storage, readiness healthchecks and an explicit migration tools profile.
+
+```sh
+# Host Node development: start only the database.
+docker compose up -d --wait postgres
+# All containers: reviewed migrations are an explicit operator step.
+docker compose build
+docker compose --profile tools run --rm migrate
+docker compose up --build -d --wait
+```
+
+A strong private JWT secret is required for the production-mode API. See [container operations](docs/operations.md) for environment/URL differences, admin CLI, logs, updates, backup/restore, security assumptions and troubleshooting. [P11 verification](docs/p11-verification.md) records actual local checks. The workflow runs PostgreSQL tests and container smoke checks without publishing images. Public TLS/DNS and cloud deployment remain future work.

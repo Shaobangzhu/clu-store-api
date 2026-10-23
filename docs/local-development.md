@@ -28,11 +28,11 @@ npm run dev
 | Caller | URL pattern (placeholders only) |
 |---|---|
 | Host development process | `postgresql://clu_dev:<development-password>@localhost:5433/clu_store_dev` |
-| Future API container on the Compose network | `postgresql://clu_dev:<development-password>@postgres:5432/clu_store_dev` |
+| API container on the Compose network | `postgresql://clu_dev:<development-password>@postgres:5432/clu_store_dev` |
 | Host test tooling (`TEST_DATABASE_URL`) | `postgresql://clu_test:<test-password>@localhost:5433/clu_store_test` |
-| Future test container on the Compose network | `postgresql://clu_test:<test-password>@postgres:5432/clu_store_test` |
+| Test container on the Compose network | `postgresql://clu_test:<test-password>@postgres:5432/clu_store_test` |
 
-Only `127.0.0.1:5433` is published. PostgreSQL listens internally on `5432`. The named volume is mounted at `/var/lib/postgresql`, the parent layout used by the [official PostgreSQL 18 image](https://hub.docker.com/_/postgres). Compose currently has only a `postgres` service; the API container is later work. Health requires successful queries to both databases.
+Only `127.0.0.1:5433` is published. PostgreSQL listens internally on `5432`. The named volume is mounted at `/var/lib/postgresql`, the parent layout used by the [official PostgreSQL 18 image](https://hub.docker.com/_/postgres). P11 adds `api` and an explicit profiled `migrate` operator job; see [container operations](operations.md). Host Node development still starts only `postgres`. Health requires successful queries to both databases.
 
 On a fresh volume, `docker/postgres/init-databases.sql` creates both roles/databases. SQL reads passwords from environment variables with psql `\getenv` and quotes them as SQL literals. Existing volumes skip initialization. Stop with `docker compose stop postgres`; restart with `docker compose up -d --wait postgres`. Neither command deletes data. Do not use `down -v`, prune, or reset to fix migration/initialization failures.
 
