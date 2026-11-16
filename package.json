@@ -22,7 +22,7 @@
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
     "db:migrate:dev": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:deploy": "node --env-file-if-exists=.env --import tsx scripts/migrate-deploy.ts",
     "db:migrate:test": "node --env-file-if-exists=.env --import tsx scripts/migrate-test.ts",
     "db:smoke": "node --env-file=.env --import tsx scripts/db-smoke.ts",
     "db:readiness:smoke": "node --env-file=.env --import tsx scripts/readiness-smoke.ts",
