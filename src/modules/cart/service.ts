@@ -1,7 +1,7 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../lib/errors.js';
 import type { CartRepository } from './repository.js';
-import { MAX_ITEM_QUANTITY, MAX_CART_LINES, MAX_CART_QUANTITY, type AddItem } from './schemas.js';
+import { MAX_ITEM_QUANTITY, MAX_CART_LINES, MAX_CART_QUANTITY, type AddItem, type UpdateItem } from './schemas.js';
 import { serializeCart, serializeCartItem } from './serializer.js';
 
 export function createCartService(repository: CartRepository) {
@@ -28,6 +28,31 @@ export function createCartService(repository: CartRepository) {
       const target = cart ?? await store.ensureCart();
       const item = await store.saveItem(target.id, input, quantity, unitPrice);
       return { created: !existing, item: serializeCartItem(item) };
+    }),
+    update: (userId: string, id: number, input: UpdateItem) => repository.mutate(userId, async (store) => {
+      const cart = await store.getCart();
+      const existing = cart?.items.find((item) => item.id === id);
+      if (!cart || !existing) throw new AppError(404, 'CART_ITEM_NOT_FOUND', 'Cart item not found');
+      if (cart.currency !== 'CNY' || cart.items.length > MAX_CART_LINES
+        || cart.items.some((item) => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > MAX_ITEM_QUANTITY)
+        || cart.items.reduce((sum, item) => sum + item.quantity, 0) > MAX_CART_QUANTITY) {
+        throw new AppError(422, 'INVALID_CART', 'Cart quantity, currency or item state is invalid');
+      }
+      if (input.qty > MAX_ITEM_QUANTITY
+        || cart.items.reduce((sum, item) => sum + (item.id === id ? input.qty : item.quantity), 0) > MAX_CART_QUANTITY) {
+        throw new AppError(422, 'CART_LIMIT_EXCEEDED', 'Cart quantity or item limit exceeded');
+      }
+      // Identity comes exclusively from the owned persisted line.
+      const skuInput: AddItem = { productId: existing.productId, modelId: existing.modelId,
+        memorySizeId: existing.memorySizeId, color: existing.color, qty: input.qty, deprecatedFields: [] };
+      const sku = await store.sku(skuInput);
+      if (!sku) throw new AppError(422, 'INVALID_PRODUCT_CONFIGURATION', 'Invalid product configuration');
+      if (!sku.available) throw new AppError(422, 'PRODUCT_UNAVAILABLE', 'Product configuration is unavailable');
+      const unitPrice = new Prisma.Decimal(sku.modelPrice).plus(sku.extraPrice);
+      if (unitPrice.greaterThan('9999999999.99')) {
+        throw new AppError(422, 'INVALID_PRODUCT_CONFIGURATION', 'Product configuration price is outside the supported range');
+      }
+      return serializeCartItem(await store.saveItem(cart.id, skuInput, input.qty, unitPrice));
     }),
     remove: (userId: string, id: number) => repository.mutate(userId, async (store) => {
       const result = await store.removeItem(id);

@@ -177,6 +177,14 @@ describe('P05 authentication with real PostgreSQL', () => {
       expect((await request(app()).post('/api/auth/login').send(body)).status).toBe(400);
     }
   });
+  it('recovers the current safe user through the real session endpoint', async () => {
+    const response = await request(app()).get('/api/auth/me').set('Authorization', `Bearer ${baselineToken}`);
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ success: true, meta: null, data: { id: baseline.id, role: 'USER' } });
+    expect(Object.keys(response.body.data).sort()).toEqual(['createdAt', 'email', 'id', 'role', 'username']);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expectNoSecrets(response.text);
+  });
   it('authenticates a valid token, denies USER, and observes promotion/demotion immediately', async () => {
     const input = identity();
     const user = await service.register({ ...input, deprecatedConfirmation: false });

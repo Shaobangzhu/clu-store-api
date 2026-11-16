@@ -64,7 +64,7 @@ describe('OpenAPI versus mounted Express routes', () => {
     const actual = inventory(app, mounts);
     expect(actual).toEqual(expected);
     expect(new Set(actual).size).toBe(actual.length);
-    expect(documented).toHaveLength(30);
+    expect(documented).toHaveLength(33);
   });
   it('detects removal of the legacy router mount even when its catalog definitions remain', () => {
     const { app, mounts } = registeredApp();
@@ -73,7 +73,7 @@ describe('OpenAPI versus mounted Express routes', () => {
     expect(index).toBeGreaterThanOrEqual(0);
     layers.splice(index, 1);
     const actual = inventory(app, mounts);
-    expect(expected.filter((entry) => !actual.includes(entry))).toHaveLength(5);
+    expect(expected.filter((entry) => !actual.includes(entry))).toHaveLength(6);
   });
   it('detects undocumented routes and incorrect method registrations', () => {
     const { app, mounts } = registeredApp();

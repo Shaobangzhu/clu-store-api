@@ -15,12 +15,12 @@ export interface OperationDefinition {
 }
 export interface ApiSpec {
   openapi: '3.1.0'; info: { title: string; version: string; description: string }; servers: { url: string; description: string }[];
-  paths: Record<string, Partial<Record<'get' | 'post' | 'delete', OperationDefinition>>>;
+  paths: Record<string, Partial<Record<'get' | 'post' | 'patch' | 'delete', OperationDefinition>>>;
   components: { schemas: Record<string, JsonSchema>; securitySchemes: Record<string, unknown> };
   'x-order-state-machine': Record<string, unknown>;
 }
 const examples: Record<string, unknown> = { product: exampleProduct, category: { id: 1, title: 'Phones', slug: 'phones', subTitle: null, videos: null, features: [], products: [] },
-  register: exampleUser, login: { user: exampleUser, token: '{{accessToken}}', tokenType: 'Bearer', expiresIn: 900, expiresAt: exampleDate },
+  me: exampleUser, updateCartItem: exampleCartItem, register: exampleUser, login: { user: exampleUser, token: '{{accessToken}}', tokenType: 'Bearer', expiresIn: 900, expiresAt: exampleDate },
   cartDemo: demoCart(), cart: exampleCart, addCartItem: exampleCartItem, place: examplePlacement, order: exampleCurrentOrder(),
   approve: exampleCurrentOrder('approved'), reject: exampleCurrentOrder('rejected') };
 const infrastructureErrors = { 400: ['VALIDATION_ERROR', 'MALFORMED_JSON'], 403: ['CORS_ORIGIN_DENIED'], 413: ['PAYLOAD_TOO_LARGE'], 415: ['UNSUPPORTED_MEDIA_TYPE'], 429: ['RATE_LIMITED'], 500: ['INTERNAL_ERROR'] };

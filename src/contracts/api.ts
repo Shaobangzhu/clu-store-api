@@ -3,8 +3,8 @@ import type { Router, RequestHandler } from 'express';
 import * as dto from './responses.js';
 import { listRequest, detailRequest, emptyReadRequest } from '../modules/products/schemas.js';
 import { categoryRequest } from '../modules/categories/schemas.js';
-import { registerRequest, loginRequest } from '../modules/auth/schemas.js';
-import { addItemRequest, cartReadRequest, clearCartRequest, removeItemRequest } from '../modules/cart/schemas.js';
+import { meRequest, registerRequest, loginRequest } from '../modules/auth/schemas.js';
+import { updateItemRequest, addItemRequest, cartReadRequest, clearCartRequest, removeItemRequest } from '../modules/cart/schemas.js';
 import { placeRequest, idempotencyKeySchema } from '../modules/orders/schemas.js';
 import { orderListRequest, orderDetailRequest, decisionRequest } from '../modules/orders/management-schemas.js';
 
@@ -13,7 +13,7 @@ export const mounts = { products: '/api/products', categories: '/api/categories'
 export const legacyCartMount = '/api/ShoppingCart';
 export type Access = 'public' | 'bearer' | 'admin';
 export interface ApiOperation {
-  group: keyof typeof mounts; method: 'get' | 'post' | 'delete'; route: string;
+  group: keyof typeof mounts; method: 'get' | 'post' | 'patch' | 'delete'; route: string;
   summary: string; description: string; access: Access;
   request?: z.ZodObject; headers?: z.ZodObject; responses: Record<number, z.ZodType | null>;
   errors?: Partial<Record<number, string[]>>; bodyExample?: unknown; dataExample?: unknown;
@@ -49,6 +49,11 @@ export const operations = {
     description: 'Email is required. Exactly one matching confirmPassword or deprecated ConfirmPassword is required. Username/email are trimmed, lowercased and uniquely normalized. Password is 15–128 characters, long and uncommon. Client role rejected. Strict IP/account limits. Synthetic examples are not provisioned.', responses: { 201: ok(dto.safeUser, dto.deprecationMeta) }, errors: { 409: ['ACCOUNT_CONFLICT'] }, bodyExample: syntheticRegistration },
   login: { group: 'auth', method: 'post', route: '/login', summary: 'Log in by username or email', access: 'public', request: loginRequest,
     description: 'Exactly one identifier or deprecated username alias. Generic failure for unknown user/wrong password. Returns safe user plus HS256 bearer token metadata. Env-only key, issuer/audience validation and finite TTL (default 900s); role is re-fetched per protected request. Synthetic examples are not provisioned.', responses: { 200: ok(dto.login, dto.deprecationMeta) }, errors: { 401: ['UNAUTHORIZED'] }, bodyExample: { identifier: syntheticRegistration.username, password: syntheticRegistration.password } },
+  me: { group: 'auth', method: 'get', route: '/me', summary: 'Recover the current authenticated user', access: 'bearer', request: meRequest,
+    description: 'Valid Bearer JWT required. Returns current database user id, username, email, role and createdAt only. Invalid/expired tokens and deleted users return 401. Cache-Control: no-store. Global rate limit applies; login/register credential budgets do not.', responses: { 200: ok(dto.safeUser) } },
+  updateCartItem: { group: 'cart', method: 'patch', route: '/items/:id', summary: 'Set an owned cart line quantity', access: 'bearer', request: updateItemRequest,
+    description: 'Absolute integer qty, not an increment. Zero is invalid; use DELETE to remove. Foreign/missing IDs return identical 404. Full SKU identity is retained. Owner lock serializes updates with add/delete/clear/checkout; last serialized update wins. Returns the updated line with live unitPrice and lineTotal; GET cart returns aggregate totals. Invalid existing cart returns 422. ' + pricing,
+    responses: { 200: ok(dto.cartItem) }, errors: { 404: ['CART_ITEM_NOT_FOUND'], 422: ['INVALID_CART', 'INVALID_PRODUCT_CONFIGURATION', 'PRODUCT_UNAVAILABLE', 'CART_LIMIT_EXCEEDED'] }, bodyExample: { qty: 2 } },
   cartDemo: { group: 'cart', method: 'get', route: '/fake-shopping-cart', summary: 'Read public synthetic cart demo', access: 'public', request: cartReadRequest,
     description: 'Deterministic original demo, no real user/catalog data, null IDs and available:false. Never purchasable.', responses: { 200: ok(dto.cartDemo) } },
   cart: { group: 'cart', method: 'get', route: '/', summary: 'Read own persisted cart', access: 'bearer', request: cartReadRequest,

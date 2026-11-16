@@ -93,7 +93,7 @@ describe('P06 persistent owned carts against PostgreSQL', () => {
   });
   it.each([canonical, legacy])('requires valid authentication for all private operations under %s', async (base) => {
     for (const token of [undefined, 'invalid-token']) {
-      for (const [method, path] of [['get', base], ['post', `${base}/items`], ['delete', `${base}/items/1`], ['delete', `${base}/items`]] as const) {
+      for (const [method, path] of [['get', base], ['post', `${base}/items`], ['patch', `${base}/items/1`], ['delete', `${base}/items/1`], ['delete', `${base}/items`]] as const) {
         const req = request(app)[method](path);
         if (token) req.set('Authorization', `Bearer ${token}`);
         if (method === 'post') req.send(f().input);
@@ -290,5 +290,86 @@ describe('P06 persistent owned carts against PostgreSQL', () => {
     for (const id of ['0', '-1', '1.5', '2147483648', 'bad', '%ZZ']) expect((await remove(id)).status).toBe(400);
     expect((await request(app).get(canonical).set('Authorization', `Bearer ${firstToken}`).query({ userId: f().secondUser.id })).status).toBe(400);
     expect((await clear().send({ userId: f().secondUser.id })).status).toBe(400);
+  });
+});
+
+const patch = (id: number, qty: unknown, token = firstToken, base = canonical) =>
+  request(app).patch(`${base}/items/${id}`).set('Authorization', `Bearer ${token}`).send({ qty });
+
+describe('P12 absolute cart quantity', () => {
+  it.each([canonical, legacy])('sets quantity, preserves SKU and reprices under %s', async (base) => {
+    const original = (await add({ qty: 5 })).body.data;
+    await add({ color: 'Black' });
+    await database.client.productModel.update({ where: { id: f().model.id }, data: { price: '12.40' } });
+    const response = await patch(original.id, 2, firstToken, base);
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ success: true, meta: null, data: { id: original.id,
+      product: original.product, model: { id: original.model.id }, memorySize: original.memorySize,
+      color: original.color, qty: 2, unitPrice: '12.50', lineTotal: '25.00' } });
+    expect((await read()).body.data).toMatchObject({ totalQty: 3, totalAmount: '37.50', itemCount: 2 });
+    expect((await database.client.cartItem.findUniqueOrThrow({ where: { id: original.id } })).unitPrice.toFixed(2)).toBe('12.50');
+    expect((await patch(original.id, 2)).body).toEqual(response.body);
+  });
+  it('hides foreign IDs and does not recreate deleted lines', async () => {
+    const id = (await add()).body.data.id;
+    const foreign = await patch(id, 2, secondToken);
+    const absent = await patch(2147483647, 2, secondToken);
+    expect(foreign.status).toBe(404);
+    expect(foreign.body).toEqual(absent.body);
+    await remove(id);
+    expect((await patch(id, 2)).status).toBe(404);
+    expect((await read()).body.data.items).toEqual([]);
+  });
+  it.each([undefined, 0, -1, 1.5, '2', null, 2147483648])('rejects malformed quantity %s', async (qty) => {
+    const id = (await add()).body.data.id;
+    expect((await patch(id, qty)).status).toBe(400);
+    expect((await read()).body.data.totalQty).toBe(1);
+  });
+  it('rejects injected identity, price, owner, query and invalid IDs', async () => {
+    const id = (await add()).body.data.id;
+    for (const body of [{ qty: 2, modelId: f().secondModel.id }, { qty: 2, unitPrice: '0.01' }, { qty: 2, userId: f().secondUser.id }]) {
+      expect((await request(app).patch(`${canonical}/items/${id}`).set('Authorization', `Bearer ${firstToken}`).send(body)).status).toBe(400);
+    }
+    expect((await patch(id, 2).query({ userId: f().secondUser.id })).status).toBe(400);
+    for (const invalid of ['0', '-1', '1.5', 'bad', '2147483648']) {
+      expect((await request(app).patch(`${canonical}/items/${invalid}`).set('Authorization', `Bearer ${firstToken}`).send({ qty: 2 })).status).toBe(400);
+    }
+  });
+  it('rolls back unavailable, overflowing-price and invalid cart updates', async () => {
+    const id = (await add()).body.data.id;
+    await database.client.productModel.update({ where: { id: f().model.id }, data: { inStock: false } });
+    expect((await patch(id, 2)).body.error.code).toBe('PRODUCT_UNAVAILABLE');
+    await database.client.productModel.update({ where: { id: f().model.id }, data: { inStock: true, price: '9999999999.99' } });
+    expect((await patch(id, 2)).body.error.code).toBe('INVALID_PRODUCT_CONFIGURATION');
+    await database.client.cartItem.update({ where: { id }, data: { quantity: 100 } });
+    expect((await patch(id, 2)).body.error.code).toBe('INVALID_CART');
+    expect((await database.client.cartItem.findUniqueOrThrow({ where: { id } })).quantity).toBe(100);
+  });
+  it('serializes absolute updates and races with add, delete and clear', async () => {
+    const id = (await add()).body.data.id;
+    const updates = await Promise.all([patch(id, 2), patch(id, 7, firstToken, legacy)]);
+    expect(updates.map((r) => r.status)).toEqual([200, 200]);
+    expect([2, 7]).toContain((await read()).body.data.totalQty);
+    expect((await patch(id, 98)).status).toBe(200);
+    const mixed = await Promise.all([patch(id, 99), add()]);
+    expect(mixed[0]!.status).toBe(200);
+    expect([200, 422]).toContain(mixed[1]!.status);
+    expect((await read()).body.data.totalQty).toBe(99);
+    const deletion = await Promise.all([patch(id, 2), remove(id)]);
+    expect([200, 404]).toContain(deletion[0]!.status);
+    expect(deletion[1]!.status).toBe(204);
+    expect((await read()).body.data.items).toEqual([]);
+    const next = (await add()).body.data.id;
+    const clearing = await Promise.all([patch(next, 3), clear()]);
+    expect([200, 404]).toContain(clearing[0]!.status);
+    expect(clearing[1]!.status).toBe(204);
+    expect((await read()).body.data.items).toEqual([]);
+  });
+  it('enforces aggregate caps across concurrent different-line updates', async () => {
+    const cart = await prefill([99, 99, 99, 99, 99, 2, 2]);
+    const results = await Promise.all([patch(cart.items[5]!.id, 3), patch(cart.items[6]!.id, 3)]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 422]);
+    expect((await read()).body.data.totalQty).toBe(500);
+    expect((await patch(cart.items[0]!.id, 100)).body.error.code).toBe('CART_LIMIT_EXCEEDED');
   });
 });
