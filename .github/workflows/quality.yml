@@ -31,7 +31,9 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: docker compose build
-      - run: docker compose --profile tools run --rm migrate
+      # CI uses disposable, run-scoped PostgreSQL; B3 intentionally protects a different Ubuntu database.
+      # Direct Prisma invocation is limited to this isolated CI workflow.
+      - run: docker compose --profile tools run --rm migrate node node_modules/prisma/build/index.js migrate deploy
       - run: docker compose up --build -d --wait
       - run: |
           curl --fail --silent --show-error http://127.0.0.1:3000/health
