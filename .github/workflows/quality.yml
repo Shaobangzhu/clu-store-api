@@ -29,6 +29,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:e2e:smoke
       - run: npm run build
       - run: docker compose build
       # CI uses disposable, run-scoped PostgreSQL; B3 intentionally protects a different Ubuntu database.

@@ -31,6 +31,8 @@
     "fixtures:curate": "node --import tsx scripts/curate-frontend.ts",
     "fixtures:curate:samples": "node --import tsx scripts/curate-samples.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e:run": "node --env-file-if-exists=.env --import tsx scripts/e2e-run.ts",
+    "test:e2e:smoke": "npm run test:e2e:run -- node --import tsx tests/helpers/e2e-probe.ts",
     "admin:create": "node --env-file-if-exists=.env --import tsx scripts/create-admin.ts",
     "test:unit": "vitest run --config vitest.unit.config.ts"
   },

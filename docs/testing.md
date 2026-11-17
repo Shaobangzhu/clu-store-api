@@ -59,3 +59,76 @@ Verify test database identity/isolation before state-mutating tests; the integra
 global setup additionally enforces the test URL/role and serializes test runs.
 Never start the repository PostgreSQL Compose stack or reset an existing database.
 See [P12.1 verification](integration/P12_1_BACKEND_CONTRACT.md) for actual results.
+
+## P12.10A isolated browser-test support
+
+The local `clu-store-client` checkout has commerce pages but no Playwright setup
+at implementation time. P12.10B must consume the following runner contract.
+No application endpoint or authentication bypass is added.
+
+Use Node 24/npm 11. Supply `DATABASE_URL` (development identity for comparison)
+and `TEST_DATABASE_URL` privately, or use the existing private `.env`. The guard
+requires the restricted local `clu_test`/`clu_store_test` identity and now rejects
+CONNECT permission on any other non-template database. Integration tests, test
+migrations and browser runs share one advisory lock. Do not run them concurrently.
+Test migrations remain an explicit setup step (`npm run db:migrate:test`), only
+on the verified test database. The runner never migrates or seeds development.
+
+```sh
+# From the API checkout, after test migrations have been verified:
+E2E_CORS_ORIGINS=http://127.0.0.1:5173 npm run test:e2e:run -- \
+  node /absolute/path/to/frontend/node_modules/@playwright/test/cli.js test \
+  --config=/absolute/path/to/frontend/playwright.config.ts --workers=1
+```
+
+The runner owns an ephemeral loopback API listener for the command lifetime;
+Ubuntu application services need not be running. It neither starts PostgreSQL
+nor touches central infrastructure. The child receives `E2E_API_URL` and
+`E2E_FIXTURE_PATH`. Read the latter as JSON in Node-side Playwright setup:
+`version`, `baseURL`, `users.customer`, `users.other`, `users.admin` (each has
+`id`, `username`, `email`, `password`), `categorySlug`, `productId`, `input`
+(product/model/memory/color/qty) and `expectedUnitPrice` (`10.10`). Use allocated
+IDs and the category slug, never sequence assumptions or shared catalog rows.
+Business values repeat; account names, passwords and IDs are unique per run.
+The manifest is temporary and private; never publish it or login tokens as CI
+artifacts. Database URLs and the existing JWT secret are removed from child env.
+
+P12.10B must start its own frontend process, wire its API base/proxy to
+`E2E_API_URL`, disable reuse of an existing server, and use the matching CORS
+origin. Use normal login for each role and isolated browser contexts. All normal
+authentication and rate limits stay enabled: reuse authenticated contexts and
+budget login requests (default 10/IP/15 minutes), rather than disabling limits.
+Create carts and orders through the API/UI so transactional and idempotency
+behavior remains under test. Registration scenarios must track and remove their
+own exact created accounts; the runner cleans only its three allocated users.
+Tests must not act on pre-existing users, products or orders.
+
+On child success/failure or SIGINT/SIGTERM while the child runs, the API closes, allocated order
+history/items/orders, users (including cascading carts), product options/products
+and category are removed transactionally, then the manifest and lock are released.
+Cleanup is repeatable and never uses reset, truncate or unscoped deletion.
+Interruption during startup, SIGKILL or machine loss cannot guarantee cleanup: inspect exact allocated IDs
+before manual recovery; never use a prefix-based sweep. The runner is a trusted
+local test tool, not a remotely reachable fixture/reset API.
+
+CI: use the existing disposable, job-specific PostgreSQL service and test
+migration step, run backend checks first, then install frontend dependencies and
+Playwright browsers and invoke this wrapper. Do not target shared Ubuntu services.
+A second workflow/job needs its own database service. Existing quality CI runs the
+new fixture regression automatically through `npm test` and the runner lifecycle
+smoke through `npm run test:e2e:smoke`; the actual browser job
+belongs to P12.10B. Live browser acceptance remains PENDING.
+
+Fresh CI provisioning also revokes PUBLIC CONNECT on the `postgres` maintenance
+database to satisfy the stricter guard. This initialization SQL applies only to
+new disposable volumes; it was not executed against Ubuntu infrastructure.
+Existing database installations that fail the guard need operator-reviewed
+privilege configuration, never an automatic repair or volume replacement.
+
+P12.10A local verification: Node 24.19.0; lint, typecheck, build, documentation
+contract validation and all 343 tests (16 files) passed. Two E2E runner smoke
+runs passed; a failing child retained exit code 7 and a subsequent guarded run
+succeeded. The read-only preflight confirmed the test identity and denied access
+to development and maintenance databases before database tests ran. No migrations
+or seeds were executed. Fresh hosted CI provisioning and live browser acceptance
+have not been executed here.

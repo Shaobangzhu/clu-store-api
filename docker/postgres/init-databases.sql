@@ -7,5 +7,7 @@ CREATE DATABASE clu_store_dev OWNER clu_dev;
 CREATE DATABASE clu_store_test OWNER clu_test;
 REVOKE CONNECT ON DATABASE clu_store_dev FROM PUBLIC;
 REVOKE CONNECT ON DATABASE clu_store_test FROM PUBLIC;
+-- The test role must not connect to any other non-template database.
+REVOKE CONNECT ON DATABASE postgres FROM PUBLIC;
 GRANT CONNECT ON DATABASE clu_store_dev TO clu_dev;
 GRANT CONNECT ON DATABASE clu_store_test TO clu_test;
