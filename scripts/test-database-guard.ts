@@ -37,4 +37,12 @@ export async function assertTestConnection(client: Client): Promise<void> {
     || row.rolsuper || row.rolcreatedb || row.rolcreaterole || row.rolreplication || row.rolbypassrls) {
     throw new Error('Refusing test database access: actual database/role is unsafe');
   }
+  const accessible = await client.query<{ name: string }>(`
+    SELECT datname AS name FROM pg_database
+    WHERE NOT datistemplate AND datname <> current_database()
+      AND has_database_privilege(current_user, oid, 'CONNECT')
+  `);
+  if (accessible.rows.length) {
+    throw new Error('Refusing test database access: test role can connect to another database');
+  }
 }
