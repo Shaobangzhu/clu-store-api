@@ -44,3 +44,18 @@ The database suites assert complete 400/401/403/404/409/422/429 envelopes. Exist
 Cleanup removes only that hosted job's run-specific Compose project/volume. There is no publish, deployment or remote database step. Workflow YAML can be checked locally; a passing GitHub Actions run requires actual remote execution and is not implied by local results. P11 still owns the API production image and deployment topology.
 
 The original roadmap's clean-install, fresh-schema and curated-seed repeatability evidence belongs to P02/P03 and a fresh CI run; P10 does not rerun a development catalog seed. Frontend integration and final security freeze remain P12/P13. See [the P10 evidence](p10-verification.md) for what was actually executed.
+
+## P12.1 contract extensions
+
+`tests/session.test.ts` covers safe session DTOs, current roles/deletion, malformed,
+expired and invalid-signature JWTs, rate-limit separation and strict PATCH inputs.
+The guarded auth/cart integration suites exercise actual PostgreSQL session
+recovery, both PATCH aliases, ownership, live pricing, rollback, quantity caps and
+concurrent PATCH/add/delete/clear operations. Mounted-route and documentation
+tests require all 33 operations, including the new canonical and legacy routes.
+
+On Ubuntu use installed Node 24/npm 11 and central PostgreSQL on loopback 55438.
+Verify test database identity/isolation before state-mutating tests; the integration
+global setup additionally enforces the test URL/role and serializes test runs.
+Never start the repository PostgreSQL Compose stack or reset an existing database.
+See [P12.1 verification](integration/P12_1_BACKEND_CONTRACT.md) for actual results.

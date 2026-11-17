@@ -1756,6 +1756,1196 @@
         }
       }
     },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "me",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Recover the current authenticated user",
+        "description": "Valid Bearer JWT required. Returns current database user id, username, email, role and createdAt only. Invalid/expired tokens and deleted users return 401. Cache-Control: no-store. Global rate limit applies; login/register credential budgets do not.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/meResponse200"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "id": "00000000-0000-4000-8000-000000000001",
+                    "username": "synthetic_demo_user",
+                    "email": "synthetic@example.test",
+                    "role": "USER",
+                    "createdAt": "2026-01-01T00:00:00.000Z"
+                  },
+                  "meta": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | MALFORMED_JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "const": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CORS_ORIGIN_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "CORS_ORIGIN_DENIED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PAYLOAD_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Seconds until retry budget resets"
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SERVICE_NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "SERVICE_NOT_READY",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shopping-cart/items/{id}": {
+      "patch": {
+        "operationId": "updateCartItem",
+        "tags": [
+          "cart"
+        ],
+        "summary": "Set an owned cart line quantity",
+        "description": "Absolute integer qty, not an increment. Zero is invalid; use DELETE to remove. Foreign/missing IDs return identical 404. Full SKU identity is retained. Owner lock serializes updates with add/delete/clear/checkout; last serialized update wins. Returns the updated line with live unitPrice and lineTotal; GET cart returns aggregate totals. Invalid existing cart returns 422. Live full ProductModel.price + ProductMemorySize.extraPrice, using Decimal; startingPrice is never added. CNY amounts are fixed two-decimal strings. Legacy names/images/prices are bounded and discarded. Limits: 99 units/line, 50 configurations and 500 units/cart.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[1-9]\\d*$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/updateCartItemRequest"
+              },
+              "example": {
+                "qty": 2
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/updateCartItemResponse200"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "id": 1,
+                    "product": {
+                      "id": 2,
+                      "name": "Synthetic example device",
+                      "image": "/media/demo-placeholder.svg"
+                    },
+                    "model": {
+                      "id": 1,
+                      "name": "Example full base",
+                      "specification": "Synthetic specification",
+                      "price": "100.00"
+                    },
+                    "memorySize": {
+                      "id": 1,
+                      "name": "Example upgrade",
+                      "price": "20.00"
+                    },
+                    "color": "Silver",
+                    "qty": 2,
+                    "currency": "CNY",
+                    "unitPrice": "120.00",
+                    "lineTotal": "240.00",
+                    "available": true
+                  },
+                  "meta": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | MALFORMED_JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "const": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CORS_ORIGIN_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "CORS_ORIGIN_DENIED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CART_ITEM_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "CART_ITEM_NOT_FOUND",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PAYLOAD_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "INVALID_CART | INVALID_PRODUCT_CONFIGURATION | PRODUCT_UNAVAILABLE | CART_LIMIT_EXCEEDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INVALID_CART",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Seconds until retry budget resets"
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SERVICE_NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "SERVICE_NOT_READY",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeCartItem",
+        "tags": [
+          "cart"
+        ],
+        "summary": "Delete own cart line",
+        "description": "Foreign and missing cart line IDs have the same 404. Success has no response body.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[1-9]\\d*$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/removeCartItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Success; no response body"
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | MALFORMED_JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "const": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CORS_ORIGIN_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "CORS_ORIGIN_DENIED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CART_ITEM_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "CART_ITEM_NOT_FOUND",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PAYLOAD_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Seconds until retry budget resets"
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SERVICE_NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "SERVICE_NOT_READY",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ShoppingCart/items/{id}": {
+      "patch": {
+        "operationId": "updateCartItemLegacy",
+        "tags": [
+          "cart"
+        ],
+        "summary": "Set an owned cart line quantity (legacy casing alias)",
+        "description": "Absolute integer qty, not an increment. Zero is invalid; use DELETE to remove. Foreign/missing IDs return identical 404. Full SKU identity is retained. Owner lock serializes updates with add/delete/clear/checkout; last serialized update wins. Returns the updated line with live unitPrice and lineTotal; GET cart returns aggregate totals. Invalid existing cart returns 422. Live full ProductModel.price + ProductMemorySize.extraPrice, using Decimal; startingPrice is never added. CNY amounts are fixed two-decimal strings. Legacy names/images/prices are bounded and discarded. Limits: 99 units/line, 50 configurations and 500 units/cart. Same router and semantics as /api/shopping-cart/items/{id}; new clients should use canonical lowercase.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-canonical-path": "/api/shopping-cart/items/{id}",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[1-9]\\d*$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/updateCartItemRequest"
+              },
+              "example": {
+                "qty": 2
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/updateCartItemResponse200"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "id": 1,
+                    "product": {
+                      "id": 2,
+                      "name": "Synthetic example device",
+                      "image": "/media/demo-placeholder.svg"
+                    },
+                    "model": {
+                      "id": 1,
+                      "name": "Example full base",
+                      "specification": "Synthetic specification",
+                      "price": "100.00"
+                    },
+                    "memorySize": {
+                      "id": 1,
+                      "name": "Example upgrade",
+                      "price": "20.00"
+                    },
+                    "color": "Silver",
+                    "qty": 2,
+                    "currency": "CNY",
+                    "unitPrice": "120.00",
+                    "lineTotal": "240.00",
+                    "available": true
+                  },
+                  "meta": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | MALFORMED_JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "const": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CORS_ORIGIN_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "CORS_ORIGIN_DENIED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CART_ITEM_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "CART_ITEM_NOT_FOUND",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PAYLOAD_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "INVALID_CART | INVALID_PRODUCT_CONFIGURATION | PRODUCT_UNAVAILABLE | CART_LIMIT_EXCEEDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INVALID_CART",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Seconds until retry budget resets"
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SERVICE_NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "SERVICE_NOT_READY",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeCartItemLegacy",
+        "tags": [
+          "cart"
+        ],
+        "summary": "Delete own cart line (legacy casing alias)",
+        "description": "Foreign and missing cart line IDs have the same 404. Success has no response body. Same router and semantics as /api/shopping-cart/items/{id}; new clients should use canonical lowercase.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-canonical-path": "/api/shopping-cart/items/{id}",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[1-9]\\d*$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/removeCartItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Success; no response body"
+          },
+          "400": {
+            "description": "VALIDATION_ERROR | MALFORMED_JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "const": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CORS_ORIGIN_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "CORS_ORIGIN_DENIED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CART_ITEM_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "CART_ITEM_NOT_FOUND",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PAYLOAD_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Seconds until retry budget resets"
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SERVICE_NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "SERVICE_NOT_READY",
+                    "message": "Illustrative error; see documented code",
+                    "details": null
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/shopping-cart/fake-shopping-cart": {
       "get": {
         "operationId": "cartDemo",
@@ -3452,447 +4642,6 @@
                   "success": false,
                   "error": {
                     "code": "CORS_ORIGIN_DENIED",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "PAYLOAD_TOO_LARGE",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "PAYLOAD_TOO_LARGE",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "UNSUPPORTED_MEDIA_TYPE",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "UNSUPPORTED_MEDIA_TYPE",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "RATE_LIMITED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "RATE_LIMITED",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "Seconds until retry budget resets"
-              }
-            }
-          },
-          "500": {
-            "description": "INTERNAL_ERROR",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "SERVICE_NOT_READY",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "SERVICE_NOT_READY",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/shopping-cart/items/{id}": {
-      "delete": {
-        "operationId": "removeCartItem",
-        "tags": [
-          "cart"
-        ],
-        "summary": "Delete own cart line",
-        "description": "Foreign and missing cart line IDs have the same 404. Success has no response body.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "maxLength": 10,
-              "pattern": "^[1-9]\\d*$"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/removeCartItemRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Success; no response body"
-          },
-          "400": {
-            "description": "VALIDATION_ERROR | MALFORMED_JSON",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "VALIDATION_ERROR",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "UNAUTHORIZED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "UNAUTHORIZED",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            },
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string",
-                  "const": "Bearer"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "CORS_ORIGIN_DENIED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "CORS_ORIGIN_DENIED",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "CART_ITEM_NOT_FOUND",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "CART_ITEM_NOT_FOUND",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "PAYLOAD_TOO_LARGE",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "PAYLOAD_TOO_LARGE",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "UNSUPPORTED_MEDIA_TYPE",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "UNSUPPORTED_MEDIA_TYPE",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "RATE_LIMITED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "RATE_LIMITED",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "Seconds until retry budget resets"
-              }
-            }
-          },
-          "500": {
-            "description": "INTERNAL_ERROR",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "SERVICE_NOT_READY",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "SERVICE_NOT_READY",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/ShoppingCart/items/{id}": {
-      "delete": {
-        "operationId": "removeCartItemLegacy",
-        "tags": [
-          "cart"
-        ],
-        "summary": "Delete own cart line (legacy casing alias)",
-        "description": "Foreign and missing cart line IDs have the same 404. Success has no response body. Same router and semantics as /api/shopping-cart/items/{id}; new clients should use canonical lowercase.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-canonical-path": "/api/shopping-cart/items/{id}",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "maxLength": 10,
-              "pattern": "^[1-9]\\d*$"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/removeCartItemRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Success; no response body"
-          },
-          "400": {
-            "description": "VALIDATION_ERROR | MALFORMED_JSON",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "VALIDATION_ERROR",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "UNAUTHORIZED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "UNAUTHORIZED",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            },
-            "headers": {
-              "WWW-Authenticate": {
-                "schema": {
-                  "type": "string",
-                  "const": "Bearer"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "CORS_ORIGIN_DENIED",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "CORS_ORIGIN_DENIED",
-                    "message": "Illustrative error; see documented code",
-                    "details": null
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "CART_ITEM_NOT_FOUND",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "CART_ITEM_NOT_FOUND",
                     "message": "Illustrative error; see documented code",
                     "details": null
                   }
@@ -7556,6 +8305,228 @@
         },
         "required": [
           "password"
+        ],
+        "additionalProperties": false
+      },
+      "meResponse200": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "username": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "USER",
+                  "ADMIN"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              }
+            },
+            "required": [
+              "id",
+              "username",
+              "email",
+              "role",
+              "createdAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "updateCartItemResponse200": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 2147483647
+              },
+              "product": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "pattern": "^\\/media\\/[a-zA-Z0-9][a-zA-Z0-9._/-]*$"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "image"
+                ],
+                "additionalProperties": false
+              },
+              "model": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "specification": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d{2}$",
+                    "description": "CNY decimal amount serialized as a fixed two-decimal JSON STRING. Never a JSON number.",
+                    "examples": [
+                      "10.10"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "specification",
+                  "price"
+                ],
+                "additionalProperties": false
+              },
+              "memorySize": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d{2}$",
+                    "description": "CNY decimal amount serialized as a fixed two-decimal JSON STRING. Never a JSON number.",
+                    "examples": [
+                      "10.10"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "price"
+                ],
+                "additionalProperties": false
+              },
+              "color": {
+                "type": "string"
+              },
+              "qty": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "currency": {
+                "type": "string",
+                "const": "CNY"
+              },
+              "unitPrice": {
+                "type": "string",
+                "pattern": "^\\d+\\.\\d{2}$",
+                "description": "CNY decimal amount serialized as a fixed two-decimal JSON STRING. Never a JSON number.",
+                "examples": [
+                  "10.10"
+                ]
+              },
+              "lineTotal": {
+                "type": "string",
+                "pattern": "^\\d+\\.\\d{2}$",
+                "description": "CNY decimal amount serialized as a fixed two-decimal JSON STRING. Never a JSON number.",
+                "examples": [
+                  "10.10"
+                ]
+              },
+              "available": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "product",
+              "model",
+              "memorySize",
+              "color",
+              "qty",
+              "currency",
+              "unitPrice",
+              "lineTotal",
+              "available"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "updateCartItemRequest": {
+        "type": "object",
+        "properties": {
+          "qty": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "qty"
         ],
         "additionalProperties": false
       },

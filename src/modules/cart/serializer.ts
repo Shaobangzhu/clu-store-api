@@ -6,7 +6,7 @@ import type { z } from 'zod';
 import type { cartItem, cart as cartDto } from '../../contracts/responses.js';
 
 export function serializeCartItem(item: CartItemRecord): z.output<typeof cartItem> {
-  // Reads display current catalog prices; the stored unitPrice is only an add-time cache.
+  // Reads display current catalog prices; the stored unitPrice is only a mutation-time cache.
   const unitPrice = item.model.price.plus(item.memorySize.extraPrice);
   return {
     id: item.id,

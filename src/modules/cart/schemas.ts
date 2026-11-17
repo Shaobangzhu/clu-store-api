@@ -23,3 +23,7 @@ export const clearCartRequest = z.object({ query: z.object({}).strict(), body: z
 export const removeItemRequest = clearCartRequest.extend({ params: z.object({
   id: z.string().max(10).regex(/^[1-9]\d*$/).transform(Number).pipe(id),
 }) });
+
+// Structural invalidity is 400; business quantity caps retain CART_LIMIT_EXCEEDED (422).
+export const updateItemRequest = removeItemRequest.extend({ body: z.object({ qty: id }).strict() });
+export type UpdateItem = z.output<typeof updateItemRequest>['body'];

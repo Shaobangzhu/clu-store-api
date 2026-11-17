@@ -1,6 +1,6 @@
 # CLU Store API — V1 contract
 
-**Status:** P09 adds generated OpenAPI 3.1, local Swagger UI and sanitized Postman artifacts to the implemented P04–P08 API. The generated schemas complement this detailed semantic contract.
+**Status:** P12.1 adds authenticated session recovery and absolute cart quantity updates. Generated OpenAPI 3.1, local Swagger UI and sanitized Postman artifacts complement this semantic contract.
 
 ## Response and money rules
 
@@ -41,6 +41,44 @@ The original paths remain callable in V1, but the new envelope and validation ru
 ### New V1 routes
 
 `GET /api/categories` (public navigation summaries); `GET /api/orders` (paginated own orders); `GET /api/admin/orders` (ADMIN paginated all orders; search/filtering is not implemented); `GET /health` (liveness); `GET /ready` (database readiness); `GET /docs` (Swagger UI); `GET /docs/openapi.json` (raw OpenAPI 3.1 JSON).
+
+### P12.1 session recovery and cart quantity
+
+Both endpoints return the existing `{success,data,meta}` envelope with `meta:null`.
+They require a Bearer JWT and use `Cache-Control: no-store`.
+
+- `GET /api/auth/me`: `200` with the current safe user directly in `data`:
+  `{id,username,email,role,createdAt}`. No token refresh, password/hash or internal
+  account metadata. Authentication reloads the user from PostgreSQL; deleted users
+  and invalid/expired tokens return `401 UNAUTHORIZED` with `WWW-Authenticate: Bearer`.
+  Unknown query keys return 400. Global request limits apply; this route neither
+  consumes nor is blocked by login/register IP or account budgets. Those credential
+  routes retain their shared IP limiter before JSON parsing and normalized account limiter.
+- `PATCH /api/shopping-cart/items/:id` (also `/api/ShoppingCart/items/:id`):
+  body `{"qty":2}` sets an **absolute** quantity. It returns `200` with the same
+  safe cart-item DTO used by POST, including full SKU identity, current `unitPrice`
+  and recomputed `lineTotal`. GET cart returns server-calculated aggregate totals.
+  No SKU, owner, currency, price or display overrides are accepted.
+
+PATCH uses a positive integer line ID and strict integer quantity without coercion.
+Missing/zero/negative/fractional/string quantities, invalid IDs, extra body fields
+and query keys return `400 VALIDATION_ERROR`. Use DELETE to remove a line.
+Quantities above 99 or a resulting cart total above 500 return
+`422 CART_LIMIT_EXCEEDED`; the existing 50-line cap remains in force.
+Foreign and missing IDs have indistinguishable `404 CART_ITEM_NOT_FOUND` responses.
+Invalid existing quantity/line/currency state returns `422 INVALID_CART`.
+Invalid SKU membership/price range and unavailable selected stock return
+`422 INVALID_PRODUCT_CONFIGURATION` and `422 PRODUCT_UNAVAILABLE` respectively.
+Failures leave the cart unchanged.
+
+The existing owner row lock and transaction serialize PATCH with add, delete,
+clear and checkout on both aliases. SKU catalog share locks protect selected
+price/availability until commit. Full product/model/memory/color identity and line
+ID remain unchanged. Concurrent absolute updates use last-serialized-write wins;
+there is no optimistic version check. A successful retry of the same quantity
+does not increment it, but can reflect a newer catalog price. If delete/checkout
+wins first, PATCH returns 404 and never recreates the line. Amounts remain Decimal
+strings; no migration or existing endpoint response change is required.
 
 ### Compatibility and deprecation map
 

@@ -24,8 +24,8 @@ describe('generated documentation contract', () => {
     for (const path of artifactPaths.slice(0, 2)) expect(() => JSON.parse(readFileSync(path, 'utf8'))).not.toThrow();
   });
   it('validates OpenAPI 3.1, official Postman v2.1, 17 historical routes, examples and security', async () => {
-    expect(await validateDocumentation(spec, collection)).toMatchObject({ openapi: '3.1.0', historicalRoutes: 17, uniqueOperations: 30,
-      postmanRequests: 30, securityDeclarations: 'passed', monetaryStrings: 'passed', postmanV21: 'passed', embeddedTokens: 0, blockedValues: 0 });
+    expect(await validateDocumentation(spec, collection)).toMatchObject({ openapi: '3.1.0', historicalRoutes: 17, uniqueOperations: 33,
+      postmanRequests: 33, securityDeclarations: 'passed', monetaryStrings: 'passed', postmanV21: 'passed', embeddedTokens: 0, blockedValues: 0 });
     for (const legacy of historicalRoutes) {
       const [method, path] = legacy.split(' ');
       expect(spec.paths[path!]?.[method as 'get' | 'post' | 'delete']).toBeDefined();

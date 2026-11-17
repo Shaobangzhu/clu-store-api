@@ -5,7 +5,7 @@ import type { PrismaClient } from '../../generated/prisma/client.js';
 import type { AuthService } from '../auth/service.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
-import { addItemRequest, cartReadRequest, clearCartRequest, removeItemRequest } from './schemas.js';
+import { updateItemRequest, addItemRequest, cartReadRequest, clearCartRequest, removeItemRequest } from './schemas.js';
 import { createCartRepository } from './repository.js';
 import { createCartService } from './service.js';
 import { demoCart } from './demo.js';
@@ -24,6 +24,10 @@ export function cartRouter(database: PrismaClient | undefined, auth: AuthService
     const result = await service.add(res.locals.user!.id, body);
     res.locals.success(result.item, result.created ? 201 : 200,
       body.deprecatedFields.length ? { deprecatedFields: body.deprecatedFields } : null);
+  });
+  contractRoute(router, 'updateCartItem', authenticated, validate(updateItemRequest), async (_req, res) => {
+    const { params, body } = res.locals.validated as z.output<typeof updateItemRequest>;
+    res.locals.success(await service.update(res.locals.user!.id, params.id, body));
   });
   contractRoute(router, 'removeCartItem', authenticated, validate(removeItemRequest), async (_req, res) => {
     const { params } = res.locals.validated as z.output<typeof removeItemRequest>;

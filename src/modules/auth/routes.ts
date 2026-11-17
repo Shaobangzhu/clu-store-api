@@ -5,8 +5,10 @@ import { rateLimit } from 'express-rate-limit';
 import type { z } from 'zod';
 import type { Env } from '../../config/env.js';
 import { AppError } from '../../lib/errors.js';
+import { requireAuth } from '../../middleware/auth.js';
+import { serializeUser } from './repository.js';
 import { validate } from '../../middleware/validate.js';
-import { loginRequest, registerRequest } from './schemas.js';
+import { meRequest, loginRequest, registerRequest } from './schemas.js';
 import type { AuthService } from './service.js';
 
 export function authIpLimiter(config: Env) {
@@ -16,7 +18,10 @@ export function authIpLimiter(config: Env) {
   });
   const router = Router({ caseSensitive: true });
   router.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
-  router.use(limiter);
+  router.use((req, res, next) => {
+    if (req.method === 'POST' && /^\/(login|register)\/?$/.test(req.path)) return limiter(req, res, next);
+    next();
+  });
   return router;
 }
 
@@ -39,6 +44,9 @@ export function authRouter(service: AuthService | undefined, config: Env) {
     if (!service) throw new AppError(503, 'SERVICE_NOT_READY', 'Authentication is not configured');
     next();
   };
+  contractRoute(router, 'me', requireAuth(service), validate(meRequest), (_req, res) => {
+    res.locals.success(serializeUser(res.locals.user!));
+  });
   contractRoute(router, 'register', ensureConfigured, validate(registerRequest), accountLimiter, async (_req, res) => {
     const { body } = res.locals.validated as z.output<typeof registerRequest>;
     const data = await service!.register(body);

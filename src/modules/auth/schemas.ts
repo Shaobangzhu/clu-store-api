@@ -44,3 +44,5 @@ export const registerRequest = z.object({ query: z.object({}).strict(), body: re
 export const loginRequest = z.object({ query: z.object({}).strict(), body: loginBody });
 export type Registration = z.output<typeof registerBody>;
 export type Login = z.output<typeof loginBody>;
+
+export const meRequest = z.object({ query: z.object({}).strict() });
